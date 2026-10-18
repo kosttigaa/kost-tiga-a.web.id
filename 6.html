@@ -60,6 +60,7 @@
     .nav-links a { font-size: 13px; font-weight: 600; text-decoration: none; color: #494754; }
     .nav-links a:hover { color: var(--blue); }
     .nav-contact { padding: 11px 16px; border-radius: 999px; background: var(--ink); color: white !important; }
+    .nav-mobile-menu { display: none; }
     .hero { padding: 82px 0 60px; overflow: hidden; }
     .hero-inner { display: grid; grid-template-columns: minmax(0, 1fr) 270px; align-items: end; gap: 60px; }
     .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--blue-dark); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
@@ -181,9 +182,17 @@
     @media (max-width: 620px) {
       .wrap { width: min(100% - 32px, var(--content)); }
       .nav { min-height: 66px; }
-      .nav-links { gap: 14px; }
-      .nav-links a:not(.nav-contact) { display: none; }
-      .nav-contact { padding: 10px 12px; font-size: 11px !important; }
+      .nav-links { display: none; }
+      .nav-mobile-menu { position: relative; display: block; }
+      .nav-mobile-menu summary { display: grid; width: 42px; min-height: 42px; padding: 0; place-items: center; cursor: pointer; list-style: none; }
+      .nav-mobile-menu summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+      .nav-mobile-menu summary svg { width: 20px; height: 20px; }
+      .nav-mobile-menu summary::-webkit-details-marker { display: none; }
+      .nav-mobile-links { position: absolute; top: calc(100% + 10px); right: 0; z-index: 6; display: none; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: 0 10px 24px rgb(37 29 56 / 14%); }
+      .nav-mobile-menu[open] .nav-mobile-links { display: flex; flex-direction: column; }
+      .nav-mobile-links a { padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; }
+      .nav-mobile-links a:hover { background: var(--paper); }
+      .nav-mobile-links .nav-contact { text-align: center; }
       .hero { padding: 54px 0 40px; }
       .hero-inner { grid-template-columns: 1fr; gap: 25px; }
       h1 { max-width: 520px; margin-top: 18px; font-size: clamp(40px, 12vw, 58px); }
@@ -331,6 +340,18 @@
         <a href="#fasilitas">Fasilitas</a>
         <a class="nav-contact" href="#kontak">Hubungi Kami</a>
       </div>
+      <details class="nav-mobile-menu">
+        <summary class="nav-contact" aria-label="Navigasi utama">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </summary>
+        <div class="nav-mobile-links">
+          <a href="#pilihan">Pilihan Kost</a>
+          <a href="#fasilitas">Fasilitas</a>
+          <a class="nav-contact" href="#kontak">Hubungi Kami</a>
+        </div>
+      </details>
     </nav>
   </header>
 

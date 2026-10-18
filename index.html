@@ -285,7 +285,9 @@
       .nav { min-height: 66px; }
       .nav-links { display: none; }
       .nav-mobile-menu { position: relative; display: block; }
-      .nav-mobile-menu summary { display: flex; min-height: 42px; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--ink); color: white; cursor: pointer; font-size: 12px; font-weight: 700; list-style: none; }
+      .nav-mobile-menu summary { display: grid; width: 42px; min-height: 42px; place-items: center; border-radius: 999px; background: var(--ink); color: white; cursor: pointer; list-style: none; }
+      .nav-mobile-menu summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+      .nav-mobile-menu summary svg { width: 20px; height: 20px; }
       .nav-mobile-menu summary::-webkit-details-marker { display: none; }
       .nav-mobile-links { position: absolute; top: calc(100% + 10px); right: 0; z-index: 6; display: none; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: 0 10px 24px rgb(37 29 56 / 14%); }
       .nav-mobile-menu[open] .nav-mobile-links { display: flex; flex-direction: column; }
@@ -345,7 +347,11 @@
         <a class="nav-contact" href="#kontak">Hubungi Kami</a>
       </div>
       <details class="nav-mobile-menu">
-        <summary>Buka menu</summary>
+        <summary aria-label="Navigasi utama">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </summary>
         <div class="nav-mobile-links">
           <a href="#pilihan">Pilihan Kost</a>
           <a href="#fasilitas">Fasilitas</a>
