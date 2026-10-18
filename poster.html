@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Poster A4 Estetik Gen Z - Kost Tiga A</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Plus Jakarta Sans Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0f172a;
+      margin: 0;
+      padding: 30px 10px;
+    }
+    /* Ukuran Presisi Kanvas Cetak A4 (300 DPI Ratio) */
+    .poster-a4 {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto 40px auto;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    @media print {
+      body {
+        background: transparent;
+        padding: 0;
+      }
+      .poster-a4 {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Bar Kontrol Tombol Cetak / Simpan Gambar -->
+  <div class="no-print max-w-[210mm] mx-auto mb-6 bg-slate-800/90 backdrop-blur border border-slate-700 text-white p-4 rounded-2xl flex items-center justify-between shadow-xl">
+    <div>
+      <h3 class="font-extrabold text-sm text-purple-300">Poster A4 siap cetak</h3>
+      <p class="text-xs text-slate-400">Pilih Simpan sebagai PDF atau ambil tangkapan layar untuk media sosial.</p>
+    </div>
+    <button onclick="window.print()" class="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-90 font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+      <i class="fa-solid fa-download"></i> Simpan / Cetak PDF
+    </button>
+  </div>
+
+
+  <!-- ==================== POSTER 1: KOST ATHAYA (GEN Z VIBE) ==================== -->
+  <div class="poster-a4 bg-[#FAF9F6] p-8 flex flex-col justify-between rounded-[28px] border-4 border-slate-900">
+    
+    <!-- Elemen Dekorasi Estetik -->
+    <div class="absolute -top-12 -right-12 w-48 h-48 bg-violet-400/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-10 -left-10 w-44 h-44 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Header Section -->
+    <div class="relative z-10 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center text-xs">3A</span>
+          <span class="font-black text-xs tracking-tight text-slate-900 uppercase">Kost Tiga A</span>
+        </div>
+        <span class="bg-violet-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
+          Khusus perempuan
+        </span>
+      </div>
+
+      <!-- Title & Big Headline -->
+      <div class="pt-2">
+        <span class="inline-block px-3 py-1 bg-violet-100 text-violet-800 text-[11px] font-extrabold rounded-lg transform -rotate-1 shadow-xs">
+          Nyaman untuk belajar dan beristirahat
+        </span>
+        <h1 class="text-4xl font-black text-slate-950 tracking-tight leading-none mt-2">
+          KOST ATHAYA
+        </h1>
+        <p class="text-xs text-slate-600 font-semibold mt-1">
+          Kamar 3 x 4 m &bull; Kamar mandi dalam &bull; Bebas jam malam
+        </p>
+      </div>
+    </div>
+
+    <!-- Photo Collage & Key Badges -->
+    <div class="relative z-10 grid grid-cols-12 gap-3 my-2">
+      <!-- Main Photo -->
+      <div class="col-span-8 relative h-48 rounded-2xl overflow-hidden border-2 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a]">
+        <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80" 
+             alt="Foto ilustrasi kamar Kost Athaya" 
+             class="w-full h-full object-cover" />
+        <div class="absolute top-2 right-2 bg-slate-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">
+          Foto ilustrasi
+        </div>
+        <div class="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">
+          ✨ Kamar Estetik & Rapi
+        </div>
+      </div>
+
+      <!-- Side Badges -->
+      <div class="col-span-4 flex flex-col justify-between gap-2">
+        <div class="bg-purple-100 border-2 border-slate-900 rounded-2xl p-3 text-center shadow-[3px_3px_0px_0px_#0f172a]">
+          <p class="text-[9px] uppercase font-black text-purple-700">Tersedia</p>
+          <p class="text-xs font-black text-slate-900 mt-0.5">AC / Non-AC</p>
+        </div>
+        <div class="bg-emerald-100 border-2 border-slate-900 rounded-2xl p-3 text-center shadow-[3px_3px_0px_0px_#0f172a]">
+          <p class="text-[9px] uppercase font-black text-emerald-800">Akses Mandiri</p>
+          <p class="text-xs font-black text-slate-900 mt-0.5">Akses mandiri</p>
+        </div>
+        <div class="bg-amber-100 border-2 border-slate-900 rounded-2xl p-3 text-center shadow-[3px_3px_0px_0px_#0f172a]">
+          <p class="text-[9px] uppercase font-black text-amber-800">Kenyamanan</p>
+          <p class="text-xs font-black text-slate-900 mt-0.5">Kasur nyaman</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 14 Fasilitas Grid (Gen Z Badges) -->
+    <div class="relative z-10 bg-white border-2 border-slate-900 rounded-2xl p-4 shadow-[4px_4px_0px_0px_#0f172a]">
+      <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-1.5">
+        <h3 class="text-[11px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-sparkles text-violet-600"></i> Fasilitas lengkap tersedia:
+        </h3>
+        <span class="text-[10px] font-extrabold text-violet-600">14 fasilitas</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] font-bold text-slate-800">
+        <div class="flex items-center gap-2"><i class="fa-solid fa-vector-square text-violet-600 w-3.5"></i> Kamar Luas 3 x 4 M</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shower text-sky-600 w-3.5"></i> Kamar Mandi Dalam</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-snowflake text-teal-600 w-3.5"></i> AC / Non-AC</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-mattress-pillow text-amber-600 w-3.5"></i> Kasur 90 x 200 cm</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-cloud-moon text-pink-500 w-3.5"></i> Bantal & Guling</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-laptop-file text-indigo-600 w-3.5"></i> Meja & Kursi Kerja</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shirt text-purple-600 w-3.5"></i> Lemari Pakaian</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-utensils text-orange-600 w-3.5"></i> Dapur Bersama</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-sun text-yellow-600 w-3.5"></i> Ruang Jemur Luas</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shoe-prints text-stone-600 w-3.5"></i> Rak Sepatu Bersama</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-wifi text-emerald-600 w-3.5"></i> Internet Wi-Fi Cepat</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-key text-fuchsia-600 w-3.5"></i> Kunci Gerbang Sendiri</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-motorcycle text-slate-700 w-3.5"></i> Parkir Motor Aman</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shield-halved text-rose-600 w-3.5"></i> CCTV 24 Jam Penuh</div>
+      </div>
+    </div>
+
+    <!-- Contact & Scan Footer -->
+    <div class="relative z-10 bg-slate-900 text-white rounded-2xl p-4 flex items-center justify-between border-2 border-slate-900 shadow-[4px_4px_0px_0px_#7c3aed]">
+      <div class="space-y-1">
+        <p class="text-[9px] font-black uppercase tracking-wider text-violet-300">Tanya ketersediaan kamar</p>
+        <p class="text-xs font-bold text-slate-300">Chat admin lewat WhatsApp:</p>
+        <p class="text-2xl font-black text-emerald-400 tracking-tight flex items-center gap-2">
+          <i class="fa-brands fa-whatsapp"></i> 0899-0004-926
+        </p>
+      </div>
+
+      <div class="bg-white p-2 rounded-xl text-center shrink-0 border border-slate-200">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://maps.app.goo.gl/yfk7KNRQ5tJYd9Em7" 
+             alt="QR Kost Athaya" 
+             class="w-16 h-16 mx-auto" />
+        <p class="text-[8px] font-black text-slate-900 mt-1 uppercase">Pindai untuk lihat peta & video</p>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ==================== POSTER 2: KOST PUTRI ALYA (GEN Z VIBE) ==================== -->
+  <div class="poster-a4 bg-[#FFFBFB] p-8 flex flex-col justify-between rounded-[28px] border-4 border-slate-900">
+    
+    <!-- Elemen Dekorasi Estetik -->
+    <div class="absolute -top-12 -right-12 w-48 h-48 bg-rose-300/30 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-10 -left-10 w-44 h-44 bg-pink-300/30 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Header Section -->
+    <div class="relative z-10 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center text-xs">3A</span>
+          <span class="font-black text-xs tracking-tight text-slate-900 uppercase">Kost Tiga A</span>
+        </div>
+        <span class="bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
+          Khusus perempuan
+        </span>
+      </div>
+
+      <!-- Title & Big Headline -->
+      <div class="pt-2">
+        <span class="inline-block px-3 py-1 bg-rose-100 text-rose-800 text-[11px] font-extrabold rounded-lg transform rotate-1 shadow-xs">
+          Bersih, nyaman, dan terasa aman
+        </span>
+        <h1 class="text-4xl font-black text-slate-950 tracking-tight leading-none mt-2">
+          KOST PUTRI ALYA
+        </h1>
+        <p class="text-xs text-slate-600 font-semibold mt-1">
+          Kamar 3 x 4 m &bull; Kamar mandi dalam &bull; Bebas jam malam
+        </p>
+      </div>
+    </div>
+
+    <!-- Photo Collage & Key Badges -->
+    <div class="relative z-10 grid grid-cols-12 gap-3 my-2">
+      <!-- Main Photo -->
+      <div class="col-span-8 relative h-48 rounded-2xl overflow-hidden border-2 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a]">
+        <img src="https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80"
+             alt="Foto ilustrasi kamar Kost Putri Alya"
+             class="w-full h-full object-cover" />
+        <div class="absolute top-2 right-2 bg-slate-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">
+          Foto ilustrasi
+        </div>
+        <div class="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">
+          💖 Bersih, Nyaman & Asri
+        </div>
+      </div>
+
+      <!-- Side Badges -->
+      <div class="col-span-4 flex flex-col justify-between gap-2">
+        <div class="bg-pink-100 border-2 border-slate-900 rounded-2xl p-3 text-center shadow-[3px_3px_0px_0px_#0f172a]">
+          <p class="text-[9px] uppercase font-black text-rose-700">Tersedia</p>
+          <p class="text-xs font-black text-slate-900 mt-0.5">AC / Non-AC</p>
+        </div>
+        <div class="bg-rose-100 border-2 border-slate-900 rounded-2xl p-3 text-center shadow-[3px_3px_0px_0px_#0f172a]">
+          <p class="text-[9px] uppercase font-black text-rose-800">Akses Mandiri</p>
+          <p class="text-xs font-black text-slate-900 mt-0.5">Akses mandiri</p>
+        </div>
+        <div class="bg-amber-100 border-2 border-slate-900 rounded-2xl p-3 text-center shadow-[3px_3px_0px_0px_#0f172a]">
+          <p class="text-[9px] uppercase font-black text-amber-800">Kenyamanan</p>
+          <p class="text-xs font-black text-slate-900 mt-0.5">Kasur nyaman</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 14 Fasilitas Grid (Gen Z Badges) -->
+    <div class="relative z-10 bg-white border-2 border-slate-900 rounded-2xl p-4 shadow-[4px_4px_0px_0px_#0f172a]">
+      <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-1.5">
+        <h3 class="text-[11px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-heart text-rose-500"></i> Fasilitas lengkap tersedia:
+        </h3>
+        <span class="text-[10px] font-extrabold text-rose-500">14 fasilitas</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] font-bold text-slate-800">
+        <div class="flex items-center gap-2"><i class="fa-solid fa-vector-square text-rose-500 w-3.5"></i> Kamar Luas 3 x 4 M</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shower text-sky-600 w-3.5"></i> Kamar Mandi Dalam</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-snowflake text-teal-600 w-3.5"></i> AC / Non-AC</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-mattress-pillow text-amber-600 w-3.5"></i> Kasur 90 x 200 cm</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-cloud-moon text-pink-500 w-3.5"></i> Bantal & Guling</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-laptop-file text-indigo-600 w-3.5"></i> Meja & Kursi Kerja</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shirt text-purple-600 w-3.5"></i> Lemari Pakaian</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-utensils text-orange-600 w-3.5"></i> Dapur Bersama</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-sun text-yellow-600 w-3.5"></i> Ruang Jemur Luas</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shoe-prints text-stone-600 w-3.5"></i> Rak Sepatu Bersama</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-wifi text-emerald-600 w-3.5"></i> Internet Wi-Fi Cepat</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-key text-rose-500 w-3.5"></i> Kunci Gerbang Sendiri</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-motorcycle text-slate-700 w-3.5"></i> Parkir Motor Aman</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-shield-halved text-rose-600 w-3.5"></i> CCTV 24 Jam Penuh</div>
+      </div>
+    </div>
+
+    <!-- Contact & Scan Footer -->
+    <div class="relative z-10 bg-slate-900 text-white rounded-2xl p-4 flex items-center justify-between border-2 border-slate-900 shadow-[4px_4px_0px_0px_#f43f5e]">
+      <div class="space-y-1">
+        <p class="text-[9px] font-black uppercase tracking-wider text-rose-300">Tanya ketersediaan kamar</p>
+        <p class="text-xs font-bold text-slate-300">Chat admin lewat WhatsApp:</p>
+        <p class="text-2xl font-black text-rose-400 tracking-tight flex items-center gap-2">
+          <i class="fa-brands fa-whatsapp"></i> 0896-7909-555
+        </p>
+      </div>
+
+      <div class="bg-white p-2 rounded-xl text-center shrink-0 border border-slate-200">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://maps.app.goo.gl/T6kMXvqjdQqLAQg76" 
+             alt="QR Kost Alya" 
+             class="w-16 h-16 mx-auto" />
+        <p class="text-[8px] font-black text-slate-900 mt-1 uppercase">Pindai untuk lihat peta & video</p>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
+

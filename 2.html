@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fffdf4">
+  <meta name="description" content="Kost khusus perempuan di Jatimakmur, Bekasi. Kamar 3 x 4 m, kamar mandi dalam, Wi-Fi, dan akses gerbang mandiri 24 jam.">
+  <title>Kost Tiga A | Neo-brutalism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f8f5ff;
+      --white: #fff;
+      --ink: #251d38;
+      --muted: #6d667d;
+      --line: #e8e1f2;
+      --blue: #7255e8;
+      --blue-dark: #5339c0;
+      --night: #28203f;
+      --acid: #dcfa67;
+      --lilac: #f0eaff;
+      --purple: #7659d9;
+      --coral: #ff8977;
+      --radius: 20px;
+      --content: 1120px;
+      font-family: "DM Sans", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: radial-gradient(ellipse at 12% 8%, rgb(114 85 232 / 11%), transparent 30rem), radial-gradient(ellipse at 88% 42%, rgb(255 137 119 / 10%), transparent 32rem), var(--paper); color: var(--ink); }
+    a { color: inherit; }
+    img { display: block; width: 100%; }
+    .wrap { width: min(var(--content), calc(100% - 48px)); margin-inline: auto; }
+    .skip-link { position: absolute; top: -60px; left: 16px; z-index: 10; padding: 12px 16px; background: var(--ink); color: white; }
+    .skip-link:focus { top: 12px; }
+    .site-header { position: sticky; top: 0; z-index: 5; background: rgb(248 245 255 / 92%); border-bottom: 1px solid rgb(37 29 56 / 8%); backdrop-filter: blur(12px); }
+    .nav { display: flex; align-items: center; justify-content: space-between; min-height: 76px; gap: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-mark { display: grid; width: 42px; aspect-ratio: 1; place-items: center; border: 2px solid var(--ink); border-radius: 15px; background: var(--acid); color: var(--ink); font-family: Manrope, sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0; transform: rotate(-6deg); }
+    .brand-name { font-family: Manrope, sans-serif; font-weight: 800; letter-spacing: 0; }
+    .nav-links { display: flex; align-items: center; gap: 30px; }
+    .nav-links a { font-size: 13px; font-weight: 600; text-decoration: none; color: #494754; }
+    .nav-links a:hover { color: var(--blue); }
+    .nav-contact { padding: 11px 16px; border-radius: 999px; background: var(--ink); color: white !important; }
+    .hero { padding: 82px 0 60px; overflow: hidden; }
+    .hero-inner { display: grid; grid-template-columns: minmax(0, 1fr) 270px; align-items: end; gap: 60px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--blue-dark); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+    .eyebrow::before { content: ""; width: 22px; height: 3px; border-radius: 99px; background: var(--coral); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 770px; margin: 22px 0 20px; font-family: Manrope, sans-serif; font-size: clamp(42px, 6vw, 76px); font-weight: 800; line-height: 1.04; letter-spacing: -.045em; }
+    h1 em { color: var(--blue); font-style: normal; }
+    .hero-copy { max-width: 650px; margin-bottom: 28px; color: var(--muted); font-size: 16px; line-height: 1.8; }
+    .hero-points { display: flex; flex-wrap: wrap; gap: 10px; }
+    .hero-point { display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px; background: rgb(255 255 255 / 76%); font-size: 12px; font-weight: 600; }
+    .point-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); }
+    .hero-note { padding: 24px; border: 2px solid var(--ink); border-radius: 24px 24px 24px 8px; background: var(--acid); box-shadow: 6px 7px 0 var(--ink); transform: rotate(2deg); }
+    .hero-note strong { display: block; margin-bottom: 10px; font-family: Manrope, sans-serif; font-size: 22px; line-height: 1.2; }
+    .hero-note p { margin: 0; color: #514c68; font-size: 13px; line-height: 1.65; }
+    .hero-note .note-icon { display: grid; width: 38px; aspect-ratio: 1; margin-bottom: 20px; place-items: center; border: 1px solid var(--ink); border-radius: 13px; background: white; color: var(--night); font-weight: 800; transform: rotate(-8deg); }
+    .properties { padding: 30px 0 86px; }
+    .property { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 1.1fr); row-gap: 18px; min-height: 460px; margin-bottom: 30px; overflow: hidden; border: 1px solid #e6def4; border-radius: 24px; background: var(--white); box-shadow: 0 12px 35px rgb(61 42 102 / 7%); }
+    .property-photo { position: relative; min-height: 350px; background: #ffe8e1; }
+    .property-photo img { position: absolute; inset: 0; height: 100%; object-fit: cover; }
+    .photo-disclaimer { position: absolute; top: 14px; right: 14px; z-index: 1; padding: 6px 9px; border-radius: 999px; background: rgb(32 26 50 / 82%); color: white; font-size: 10px; font-weight: 600; }
+    .photo-label { position: absolute; left: 18px; bottom: 18px; padding: 10px 14px; border: 1px solid var(--ink); border-radius: 999px; background: var(--acid); font-size: 12px; font-weight: 800; }
+    .photo-label span { margin-right: 7px; color: var(--purple); }
+    .property-content { display: flex; flex-direction: column; justify-content: center; padding: 42px; }
+    .property-map-review {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+      border-top: 1px solid var(--line);
+      background: #fbf9ff;
+    }
+    .review-summary { padding: 14px 18px; }
+    .review-summary h3 { margin: 0 0 5px; font-family: Manrope, sans-serif; font-size: 14px; }
+    .review-rating { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .review-score { color: var(--ink); font-family: Manrope, sans-serif; font-size: 22px; font-weight: 800; }
+    .review-stars { color: #e4a900; font-size: 14px; letter-spacing: 1px; }
+    .review-count { color: var(--muted); font-size: 10px; }
+    .review-summary p { margin: 0 0 8px; color: #575663; font-size: 11px; line-height: 1.45; }
+    .review-link { color: var(--blue-dark); font-size: 10px; font-weight: 700; text-underline-offset: 3px; }
+    .review-disclaimer { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; line-height: 1.35; }
+    .property-map { min-height: 178px; background: #e4e8ed; }
+    .property-map iframe { display: block; width: 100%; height: 100%; min-height: 178px; border: 0; }
+    .property-video { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); align-items: center; gap: 28px; padding: 26px; border-top: 1px solid var(--line); background: #fbf9ff; }
+    .property-video h3 { margin-bottom: 8px; font-family: Manrope, sans-serif; font-size: 20px; }
+    .property-video p { max-width: 480px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .property-video iframe, .property-video video { display: block; width: 100%; aspect-ratio: 9 / 16; border: 0; border-radius: 16px; background: #201a32; }
+    .property-topline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .property-kicker { color: var(--blue); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .air-tag { padding: 7px 11px; border-radius: 999px; background: var(--lilac); color: #51448f; font-size: 11px; font-weight: 700; }
+    h2 { font-family: Manrope, sans-serif; font-weight: 700; letter-spacing: 0; }
+    .property h2 { margin-bottom: 7px; font-size: 32px; }
+    .property-subtitle { margin-bottom: 17px; color: var(--muted); font-size: 13px; }
+    .property-price { margin: -8px 0 18px; padding: 12px 14px; border-radius: 12px; background: var(--lilac); color: var(--ink); font-size: 13px; line-height: 1.6; }
+    .property-price p { margin: 3px 0 0; }
+    .property-price small { color: var(--muted); }
+    .property-address { margin: -7px 0 18px; padding: 11px 13px; border-radius: 14px; background: #f7f3ff; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .property-address strong { color: var(--ink); }
+    .property-description { margin-bottom: 24px; color: #575663; font-size: 14px; line-height: 1.8; }
+    .amenity-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .amenity-tag { display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border: 1px solid #e9e2f5; border-radius: 999px; background: #f7f3ff; font-size: 11px; font-weight: 600; color: #48465c; }
+    .amenity-tag svg { width: 14px; height: 14px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .property-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding-top: 18px; border-top: 1px solid #eee8f5; }
+    .security-note { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 9px; }
+    .button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; border: 1px solid transparent; border-radius: 999px; font-size: 12px; font-weight: 700; text-decoration: none; transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
+    .button:hover { transform: translateY(-2px); }
+    .button-map { border-color: var(--line); background: white; }
+    .button-map:hover { background: #f2f0ff; }
+    .button-wa { background: var(--blue); color: white; box-shadow: 0 4px 0 var(--blue-dark); }
+    .button-wa:hover { background: var(--blue-dark); }
+    .button-wa-alya { background: var(--coral); color: var(--ink); }
+    .button-wa-alya:hover { background: #f56c55; }
+    .facilities { padding: 76px 0 86px; background: #f0eaff; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 34px; }
+    .section-heading .eyebrow { margin-bottom: 13px; }
+    .section-heading h2 { max-width: 520px; margin-bottom: 0; font-size: clamp(32px, 4vw, 48px); line-height: 1.1; }
+    .section-heading p { max-width: 390px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .facility-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .parking-rule { margin: 18px 0 0; padding: 12px 15px; border-left: 3px solid var(--coral); background: rgb(255 255 255 / 55%); color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .parking-rule strong { color: var(--ink); }
+    .facility { min-height: 144px; padding: 21px 18px; border: 1px solid #e4dcf2; border-radius: 18px; background: rgb(255 255 255 / 82%); box-shadow: 0 6px 18px rgb(61 42 102 / 4%); }
+    .facility-icon { display: grid; width: 36px; aspect-ratio: 1; margin-bottom: 16px; place-items: center; border: 1px solid rgb(37 29 56 / 10%); border-radius: 13px; background: white; color: var(--blue); font-size: 14px; font-weight: 700; }
+    .facility-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .facility:nth-child(4n + 2) .facility-icon { background: var(--acid); color: var(--ink); }
+    .facility:nth-child(4n + 3) .facility-icon { background: #ffe0d9; color: #9c3e2d; }
+    .facility:nth-child(4n + 4) .facility-icon { background: var(--purple); color: white; }
+    .facility h3 { margin-bottom: 6px; font-size: 13px; font-weight: 700; }
+    .facility p { margin-bottom: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .contact-band { padding: 74px 0; background: var(--night); background-image: radial-gradient(circle at 85% 20%, rgb(114 85 232 / 45%), transparent 20rem); color: white; }
+    .contact-layout { display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+    .contact-band .eyebrow { color: var(--acid); }
+    .contact-band .eyebrow::before { background: var(--acid); }
+    .contact-band h2 { max-width: 600px; margin: 14px 0 10px; font-size: clamp(30px, 4vw, 46px); line-height: 1.12; }
+    .contact-band p { margin: 0; color: #d3d0e3; font-size: 14px; }
+    .contact-options { display: flex; flex-wrap: wrap; gap: 10px; }
+    .contact-options .button { min-height: 48px; padding-inline: 17px; }
+    .button-light { background: var(--acid); color: var(--ink); }
+    .button-outline { border-color: rgb(255 255 255 / 45%); color: white; }
+    .site-footer { padding: 28px 0 36px; background: #201a32; color: #e2dfed; }
+    .footer-main { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding-bottom: 24px; border-bottom: 1px solid rgb(255 255 255 / 16%); }
+    .footer-brand { display: flex; align-items: center; gap: 12px; font-family: Manrope, sans-serif; font-weight: 700; }
+    .footer-brand .brand-mark { background: var(--acid); color: var(--night); }
+    .footer-contacts { display: flex; flex-wrap: wrap; gap: 24px; }
+    .footer-contacts a { color: #e8e5f2; font-size: 12px; text-decoration: none; }
+    .footer-contacts a:hover { text-decoration: underline; }
+    .footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding-top: 18px; color: #bcb8d1; font-size: 11px; }
+    .button:focus-visible, .nav a:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+    .footer-bottom p { margin: 0; }
+    .mobile-contact { display: none; }
+    @media (max-width: 850px) {
+      .hero-inner { grid-template-columns: 1fr 220px; gap: 30px; }
+      .property { grid-template-columns: minmax(240px, .8fr) minmax(0, 1.2fr); }
+      .property-content { padding: 30px; }
+      .property-bottom { align-items: flex-start; flex-direction: column; }
+      .facility-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .property-map-review { grid-template-columns: 1fr; }
+      .property-map { min-height: 120px; }
+      .property-map iframe { min-height: 120px; }
+    }
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 32px, var(--content)); }
+      .nav { min-height: 66px; }
+      .nav-links { gap: 14px; }
+      .nav-links a:not(.nav-contact) { display: none; }
+      .nav-contact { padding: 10px 12px; font-size: 11px !important; }
+      .hero { padding: 54px 0 40px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 25px; }
+      h1 { max-width: 520px; margin-top: 18px; font-size: clamp(40px, 12vw, 58px); }
+      .hero-copy { font-size: 14px; }
+      .hero-note { max-width: 330px; transform: none; }
+      .properties { padding: 15px 0 58px; }
+      .property { grid-template-columns: 1fr; margin-bottom: 18px; }
+      .property-photo { min-height: 270px; }
+      .property-content { padding: 25px 21px; }
+      .property-video { grid-template-columns: 1fr; gap: 18px; padding: 22px 18px; }
+      .property-video iframe, .property-video video { width: min(100%, 280px); justify-self: center; }
+      .review-summary { padding: 12px 16px; }
+      .property h2 { font-size: 28px; }
+      .property-bottom { gap: 12px; }
+      .action-row { width: 100%; }
+      .action-row .button { flex: 1; }
+      .facilities { padding: 56px 0 60px; }
+      .section-heading { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+      .section-heading h2 { font-size: 36px; }
+      .facility-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .facility { min-height: 140px; padding: 17px 13px; }
+      .facility h3 { font-size: 12px; }
+      .facility p { font-size: 10px; }
+      .contact-band { padding: 54px 0 80px; }
+      .contact-layout { align-items: flex-start; flex-direction: column; gap: 24px; }
+      .contact-options { width: 100%; }
+      .contact-options .button { flex: 1; }
+      .footer-main { align-items: flex-start; flex-direction: column; }
+      .footer-contacts { flex-direction: column; gap: 10px; }
+      .footer-bottom { flex-direction: column; }
+      .site-footer { padding-bottom: calc(36px + 64px + env(safe-area-inset-bottom)); }
+      .mobile-contact { position: fixed; right: 0; bottom: 0; left: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 16px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgb(255 255 255 / 96%); backdrop-filter: blur(12px); }
+      .mobile-contact .button { min-height: 44px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+    :root {
+      --paper: #fffdf4;
+      --white: #ffffff;
+      --ink: #171717;
+      --muted: #4d4d4d;
+      --line: #171717;
+      --blue: #3155ff;
+      --blue-dark: #1737d1;
+      --night: #171717;
+      --acid: #e8ff45;
+      --lilac: #dce4ff;
+      --purple: #3155ff;
+      --coral: #ff765e;
+      --radius: 0;
+    }
+    body { background: #fffdf4; }
+    .site-header { background: rgb(255 253 244 / 96%); border-bottom: 2px solid var(--ink); }
+    .brand-mark { border: 2px solid var(--ink); border-radius: 0; background: var(--acid); color: var(--ink); transform: rotate(-4deg); }
+    .nav-contact { border: 2px solid var(--ink); border-radius: 0; box-shadow: 3px 3px 0 var(--ink); }
+    h1, h2, h3 { letter-spacing: -.035em; }
+    h1 { text-transform: uppercase; }
+    .hero-note { border: 2px solid var(--ink); border-radius: 0; background: var(--acid); box-shadow: 7px 7px 0 var(--ink); transform: rotate(1deg); }
+    .hero-point { border: 2px solid var(--ink); border-radius: 0; background: white; }
+    .property { border: 2px solid var(--ink); border-radius: 0; box-shadow: 7px 7px 0 var(--ink); }
+    .photo-label { border: 2px solid var(--ink); border-radius: 0; background: var(--acid); }
+    .air-tag, .amenity-tag { border: 1px solid var(--ink); border-radius: 0; }
+    .amenity-tag { background: #fff1cf; }
+    .button { border: 2px solid var(--ink); border-radius: 0; box-shadow: 3px 3px 0 var(--ink); }
+    .button:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+    .button-wa { background: var(--blue); box-shadow: 3px 3px 0 var(--ink); }
+    .facility-grid { gap: 12px; }
+    .facility { border: 2px solid var(--ink); border-radius: 0; background: white; box-shadow: 4px 4px 0 var(--ink); }
+    .facility-icon { border: 2px solid var(--ink); border-radius: 0; }
+    .property-address { border: 1px solid var(--ink); border-radius: 0; }
+    .contact-band { border-block: 2px solid var(--ink); }
+    .mobile-contact { border-top: 2px solid var(--ink); }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Lewati ke konten</a>
+  <header class="site-header">
+    <nav class="nav wrap" aria-label="Navigasi utama">
+      <a class="brand" href="#top" aria-label="Kost Tiga A, kembali ke atas">
+        <span class="brand-mark">3A</span>
+        <span class="brand-name">Kost Tiga A</span>
+      </a>
+      <div class="nav-links">
+        <a href="#pilihan">Pilihan Kost</a>
+        <a href="#fasilitas">Fasilitas</a>
+        <a class="nav-contact" href="#kontak">Hubungi Kami</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-inner wrap">
+        <div>
+          <span class="eyebrow">Kost khusus perempuan</span>
+          <h1>Kost nyaman,<br><em>bebas ribet</em> &amp; bebas jam malam.</h1>
+          <p class="hero-copy">Kamar 3 x 4 m dengan kamar mandi dalam, perabot lengkap, Wi-Fi, dan akses gerbang mandiri 24 jam. Cocok untuk mahasiswi dan karyawati.</p>
+          <div class="hero-points" aria-label="Keunggulan utama">
+            <span class="hero-point"><span class="point-dot"></span>Kunci gerbang sendiri</span>
+            <span class="hero-point"><span class="point-dot"></span>Wi-Fi</span>
+            <span class="hero-point"><span class="point-dot"></span>CCTV 24/7</span>
+          </div>
+        </div>
+        <aside class="hero-note" aria-label="Informasi akses">
+          <span class="note-icon" aria-hidden="true">24</span>
+          <strong>Pulang kapan saja, tetap tenang.</strong>
+          <p>Akses gerbang mandiri dan CCTV area umum membantu menjaga rasa aman setiap hari.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="properties wrap" id="pilihan" aria-label="Pilihan properti">
+      <article class="property">
+        <div class="property-photo">
+          <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&amp;fit=crop&amp;w=1000&amp;q=85" alt="Foto ilustrasi kamar kost Athaya" loading="eager">
+          <span class="photo-disclaimer">Foto ilustrasi</span>
+          <span class="photo-label"><span>01</span> Kost Athaya</span>
+        </div>
+        <div class="property-content">
+          <div class="property-topline"><span class="air-tag">Pilihan AC / non-AC</span></div>
+          <h2>Kost Athaya</h2>
+          <p class="property-subtitle">Khusus perempuan</p>
+          <p class="property-description">Suasananya tenang dan privat, cocok buat mahasiswi atau karyawati yang butuh tempat nyaman untuk belajar maupun WFH. Kamar 3 x 4 m dilengkapi kamar mandi dalam, kasur, meja kerja, dan lemari.</p>
+          <div class="property-price" aria-label="Harga sewa bulanan Kost Athaya">
+            <strong>Harga sewa per bulan</strong>
+            <p>Non-AC: <strong>Rp900.000</strong> · AC: <strong>Rp1.200.000</strong></p>
+            <small>Belum termasuk token listrik. Setiap kamar mengisi ulang token listriknya masing-masing.</small>
+          </div>
+          <p class="property-address"><strong>Alamat:</strong> JL. Monitor RT. 002/09 No. 9, Jatimakmur, Kec. Pondok Gede, Kota Bekasi, Jawa Barat 17413</p>
+          <div class="amenity-tags" aria-label="Fasilitas Kost Athaya">
+            <span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-ruler"></use></svg>Kamar 3 x 4 m</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-bath"></use></svg>Kamar mandi dalam</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-air-vent"></use></svg>AC atau non-AC</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-bed"></use></svg>Kasur 90 x 200</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-key"></use></svg>Akses gerbang mandiri</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-wifi"></use></svg>Wi-Fi</span>
+          </div>
+          <div class="property-bottom">
+            <span class="security-note">Parkir motor · CCTV 24 jam</span>
+            <div class="action-row">
+              <a class="button button-map" href="https://maps.app.goo.gl/yZFYH7pUvwJjYWKW6" target="_blank" rel="noopener noreferrer">Lihat peta <span aria-hidden="true">↗</span></a>
+              <a class="button button-wa" href="https://wa.me/628990004926?text=Halo%20Admin%20Kost%20Athaya%2C%20saya%20ingin%20tanya%20kamar" target="_blank" rel="noopener noreferrer">Chat WhatsApp <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </div>
+        <section class="property-video" aria-labelledby="athaya-video-title">
+          <div>
+            <h3 id="athaya-video-title">Lihat video Kost Athaya</h3>
+            <p>Kenali suasana Kost Athaya lewat video berikut.</p>
+          </div>
+          <video controls playsinline preload="metadata" aria-label="Video Kost Athaya">
+            <source src="img/athaya%201.mp4" type="video/mp4">
+            Browser Anda tidak mendukung pemutar video.
+          </video>
+        </section>
+        <section class="property-map-review" aria-label="Rating Google dan peta Kost Athaya">
+          <div class="review-summary">
+            <h3>Ulasan di Google</h3>
+            <div class="review-rating" aria-label="Rating Google 4,9 dari 5 berdasarkan 19 ulasan">
+              <span class="review-score">4,9</span>
+              <span>
+                <span class="review-stars" aria-hidden="true">★★★★★</span><br>
+                <span class="review-count">19 ulasan</span>
+              </span>
+            </div>
+            <p>Sorotan ulasan menyebut kamar yang bersih dan nyaman, perabot kamar yang lengkap, serta kamar mandi dalam.</p>
+            <a class="review-link" href="https://maps.app.goo.gl/yZFYH7pUvwJjYWKW6" target="_blank" rel="noopener noreferrer">Lihat ulasan di Google Maps ↗</a>
+            <small class="review-disclaimer">Rating dan jumlah ulasan dapat berubah. Ringkasan di atas bukan kutipan langsung.</small>
+          </div>
+          <div class="property-map">
+            <iframe src="https://www.google.com/maps?q=-6.2805559%2C106.930198&amp;z=16&amp;output=embed" title="Peta lokasi Kost Athaya di Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+        </section>
+      </article>
+
+      <article class="property">
+        <div class="property-photo">
+          <img src="https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&amp;fit=crop&amp;w=1000&amp;q=85" alt="Foto ilustrasi kamar Kost Putri: Alya" loading="lazy">
+          <span class="photo-disclaimer">Foto ilustrasi</span>
+          <span class="photo-label"><span>02</span> Kost Putri: Alya</span>
+        </div>
+        <div class="property-content">
+          <div class="property-topline"><span class="air-tag">Pilihan AC / non-AC</span></div>
+          <h2>Kost Putri: Alya</h2>
+          <p class="property-subtitle">Khusus perempuan</p>
+          <p class="property-description">Suasananya bersih dan nyaman, cocok buat mahasiswi atau karyawati. Tersedia dapur bersama, area jemur luas, dan akses gerbang mandiri 24 jam.</p>
+          <div class="property-price" aria-label="Harga sewa bulanan Kost Putri: Alya">
+            <strong>Harga sewa per bulan</strong>
+            <p>Non-AC: <strong>Rp1.000.000</strong> · AC: <strong>Rp1.300.000</strong></p>
+            <small>Belum termasuk token listrik. Setiap kamar mengisi ulang token listriknya masing-masing.</small>
+          </div>
+          <p class="property-address"><strong>Alamat:</strong> JL. Monitor RT. 008/09 No. 31, Jatimakmur, Kec. Pondok Gede, Kota Bekasi, Jawa Barat 17413</p>
+          <div class="amenity-tags" aria-label="Fasilitas Kost Putri: Alya">
+            <span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-ruler"></use></svg>Kamar 3 x 4 m</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-bath"></use></svg>Kamar mandi dalam</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-air-vent"></use></svg>AC atau non-AC</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-bed"></use></svg>Kasur 90 x 200</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-key"></use></svg>Akses gerbang mandiri</span><span class="amenity-tag"><svg aria-hidden="true" focusable="false"><use href="lucide-icons.svg#icon-wifi"></use></svg>Wi-Fi</span>
+          </div>
+          <div class="property-bottom">
+            <span class="security-note">Privasi terjaga · CCTV 24 jam</span>
+            <div class="action-row">
+              <a class="button button-map" href="https://maps.app.goo.gl/T6kMXvqjdQqLAQg76" target="_blank" rel="noopener noreferrer">Lihat peta <span aria-hidden="true">↗</span></a>
+              <a class="button button-wa" href="https://wa.me/6289679059555?text=Halo%20Admin%20Kost%20Putri%3A%20Alya%2C%20saya%20ingin%20tanya%20kamar" target="_blank" rel="noopener noreferrer">Chat WhatsApp <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </div>
+        <section class="property-video" aria-labelledby="alya-video-title">
+          <div>
+            <h3 id="alya-video-title">Lihat video Kost Putri: Alya</h3>
+            <p>Kenali lebih dekat Kost Putri: Alya melalui video berikut.</p>
+          </div>
+          <iframe src="https://www.youtube-nocookie.com/embed/PHxJ6jQGN_0" title="Video informasi Kost Putri: Alya" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </section>
+        <section class="property-map-review" aria-label="Rating Google dan peta Kost Putri: Alya">
+          <div class="review-summary">
+            <h3>Ulasan di Google</h3>
+            <div class="review-rating" aria-label="Rating Google 5,0 dari 5 berdasarkan 5 ulasan">
+              <span class="review-score">5,0</span>
+              <span>
+                <span class="review-stars" aria-hidden="true">★★★★★</span><br>
+                <span class="review-count">5 ulasan</span>
+              </span>
+            </div>
+            <p>Sorotan ulasan menyebut fasilitas yang baik dan lengkap, sirkulasi udara yang nyaman, serta pengelola yang responsif.</p>
+            <a class="review-link" href="https://maps.app.goo.gl/T6kMXvqjdQqLAQg76" target="_blank" rel="noopener noreferrer">Lihat ulasan di Google Maps ↗</a>
+            <small class="review-disclaimer">Rating dan jumlah ulasan dapat berubah. Ringkasan di atas bukan kutipan langsung.</small>
+          </div>
+          <div class="property-map">
+            <iframe src="https://www.google.com/maps?q=-6.2819967%2C106.9294713&amp;z=16&amp;output=embed" title="Peta lokasi Kost Putri: Alya di Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+        </section>
+      </article>
+    </section>
+
+    <section class="facilities" id="fasilitas">
+      <div class="wrap">
+        <div class="section-heading">
+          <div><span class="eyebrow">Standar Kost Tiga A</span><h2>14 fasilitas untuk kebutuhan sehari-hari.</h2></div>
+          <p>Semua fasilitas ini tersedia di Kost Athaya dan Kost Putri: Alya. Kamu tinggal bawa barang pribadi.</p>
+        </div>
+        <div class="facility-grid">
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-ruler"></use></svg></span><h3>Kamar 3 x 4 m</h3><p>Ruang gerak lebih leluasa.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-bath"></use></svg></span><h3>Kamar mandi dalam</h3><p>Privat, higienis, dan tidak perlu antre.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-bed"></use></svg></span><h3>Kasur 90 x 200 cm</h3><p>Tempat nyaman untuk beristirahat.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-sparkles"></use></svg></span><h3>Bantal &amp; guling</h3><p>Sudah tersedia di kamar.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-air-vent"></use></svg></span><h3>Pilihan AC atau non-AC</h3><p>Pilih sesuai kebutuhanmu.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-notebook"></use></svg></span><h3>Meja &amp; kursi</h3><p>Pas untuk belajar, mengerjakan skripsi, atau bekerja.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-door"></use></svg></span><h3>Lemari pakaian</h3><p>Simpan pakaian dan barang pribadi dengan rapi.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-cooking-pot"></use></svg></span><h3>Dapur bersama</h3><p>Bisa masak sederhana kapan pun.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-sun"></use></svg></span><h3>Ruang jemur luas</h3><p>Area berangin dengan cahaya yang cukup.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-footprints"></use></svg></span><h3>Rak sepatu bersama</h3><p>Alas kaki tersimpan rapi di selasar.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-wifi"></use></svg></span><h3>Wi-Fi</h3><p>Untuk kuliah, kerja, dan hiburan.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-key"></use></svg></span><h3>Akses gerbang mandiri</h3><p>Pulang dan pergi tanpa batasan jam malam.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-parking"></use></svg></span><h3>Parkir motor</h3><p>Parkir terlindungi di dalam pagar.</p></article>
+          <article class="facility"><span class="facility-icon" aria-hidden="true"><svg focusable="false"><use href="lucide-icons.svg#icon-cctv"></use></svg></span><h3>CCTV 24 jam</h3><p>Area umum dipantau untuk keamanan bersama.</p></article>
+        </div>
+        <p class="parking-rule"><strong>Aturan parkir:</strong> Motor wajib dikunci ganda saat diparkir. Kehilangan kendaraan menjadi tanggung jawab pemilik.</p>
+      </div>
+    </section>
+
+    <section class="contact-band" id="kontak">
+      <div class="contact-layout wrap">
+        <div><span class="eyebrow">Masih cari kamar?</span><h2>Temukan kamar yang cocok untukmu.</h2><p>Hubungi admin kost untuk cek ketersediaan kamar.</p></div>
+        <div class="contact-options">
+          <a class="button button-light" href="https://wa.me/628990004926?text=Halo%20Admin%20Kost%20Athaya%2C%20mau%20tanya%20ketersediaan%20kamar" target="_blank" rel="noopener noreferrer">Chat Athaya ↗</a>
+          <a class="button button-outline" href="https://wa.me/6289679059555?text=Halo%20Admin%20Kost%20Putri%3A%20Alya%2C%20mau%20tanya%20ketersediaan%20kamar" target="_blank" rel="noopener noreferrer">Chat Alya ↗</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-main">
+        <a class="brand footer-brand" href="#top"><span class="brand-mark">3A</span><span>Kost Tiga A</span></a>
+        <div class="footer-contacts"><a href="https://wa.me/628990004926" target="_blank" rel="noopener noreferrer">Athaya · 08990004926 ↗</a><a href="https://wa.me/6289679059555" target="_blank" rel="noopener noreferrer">Putri Alya · 089679059555 ↗</a></div>
+      </div>
+      <div class="footer-bottom"><p>© 2026 Kost Tiga A. Hak cipta dilindungi.</p><p>Bebas jam malam · Akses gerbang mandiri · CCTV 24 jam</p></div>
+    </div>
+  </footer>
+
+  <div class="mobile-contact" aria-label="Kontak WhatsApp cepat">
+    <a class="button button-wa" href="https://wa.me/628990004926?text=Halo%20Admin%20Kost%20Athaya%2C%20mau%20tanya%20kamar" target="_blank" rel="noopener noreferrer">Chat Athaya</a>
+    <a class="button button-wa-alya" href="https://wa.me/6289679059555?text=Halo%20Admin%20Kost%20Putri%3A%20Alya%2C%20mau%20tanya%20kamar" target="_blank" rel="noopener noreferrer">Chat Alya</a>
+  </div>
+</body>
+</html>
