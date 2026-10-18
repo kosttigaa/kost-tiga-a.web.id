@@ -31,9 +31,41 @@
           localStorage.setItem(storageKey, selectedPage);
         }
 
-        if (selectedPage !== "index.html") {
-          window.location.replace(selectedPage);
+        if (selectedPage === "index.html") {
+          return;
         }
+
+        document.documentElement.style.visibility = "hidden";
+        document.addEventListener("DOMContentLoaded", async () => {
+          try {
+            const response = await fetch(selectedPage);
+            if (!response.ok) {
+              throw new Error("Unable to load selected page theme.");
+            }
+
+            const variantDocument = new DOMParser().parseFromString(await response.text(), "text/html");
+            const variantStyles = variantDocument.querySelector("style");
+            const activeStyles = document.getElementById("variant-theme");
+
+            if (!variantStyles || !activeStyles) {
+              throw new Error("Selected page theme is unavailable.");
+            }
+
+            activeStyles.textContent = variantStyles.textContent;
+
+            for (const fontLink of variantDocument.querySelectorAll('link[rel="stylesheet"][href*="fonts.googleapis.com"]')) {
+              const alreadyLoaded = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]'))
+                .some((loadedFont) => loadedFont.href === fontLink.href);
+
+              if (!alreadyLoaded) {
+                document.head.append(fontLink.cloneNode());
+              }
+            }
+          } catch {
+          } finally {
+            document.documentElement.style.visibility = "";
+          }
+        }, { once: true });
       } catch {
       }
     })();
@@ -91,7 +123,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://images.unsplash.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <style>
+  <style id="variant-theme">
     :root {
       color-scheme: light;
       --paper: #f8f5ff;
