@@ -50,6 +50,7 @@
     #page-info { min-width: 110px; color: var(--muted); font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; }
     td.ip, td.time, td.status-code { white-space: nowrap; font-variant-numeric: tabular-nums; }
     td.path { min-width: 180px; overflow-wrap: anywhere; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    td.browser { min-width: 140px; }
     .empty { padding: 28px 14px; color: var(--muted); text-align: center; }
     @media (max-width: 600px) {
       header { min-height: 60px; padding-inline: 16px; }
@@ -71,14 +72,14 @@
     <h1>Log akses pengunjung</h1>
     <p class="intro">Permintaan terbaru ke situs ini. Alamat IP dan waktu mengikuti catatan server.</p>
     <div class="toolbar">
-      <label class="search"><input id="search" type="search" placeholder="Cari IP atau halaman" autocomplete="off" aria-label="Cari IP atau halaman"></label>
+      <label class="search"><input id="search" type="search" placeholder="Cari IP, halaman, atau browser" autocomplete="off" aria-label="Cari IP, halaman, atau browser"></label>
       <button id="refresh" type="button">Muat ulang</button>
     </div>
     <p id="status" role="status" aria-live="polite">Memuat log...</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">IP</th><th scope="col">Waktu server</th><th scope="col">Halaman</th><th scope="col">Metode</th><th scope="col">Status</th></tr></thead>
-        <tbody id="entries"><tr><td class="empty" colspan="5">Memuat log...</td></tr></tbody>
+        <thead><tr><th scope="col">IP</th><th scope="col">Waktu server</th><th scope="col">Halaman</th><th scope="col">Browser</th><th scope="col">Metode</th><th scope="col">Status</th></tr></thead>
+        <tbody id="entries"><tr><td class="empty" colspan="6">Memuat log...</td></tr></tbody>
       </table>
     </div>
     <nav class="pagination" aria-label="Navigasi halaman log">
@@ -101,14 +102,39 @@
 
     function parseLog(text) {
       return text.trim().split("\n").filter(Boolean).map((line) => {
-        const match = line.match(/^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+)(?: [^"]*)?" (\d{3}) /);
-        return match ? { ip: match[1], time: match[2], method: match[3], path: match[4], status: match[5] } : null;
+        const match = line.match(/^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+)(?: [^"]*)?" (\d{3}) \S+ "[^"]*" "([^"]*)"$/);
+        return match ? {
+          ip: match[1],
+          time: match[2],
+          method: match[3],
+          path: match[4],
+          status: match[5],
+          browser: getBrowser(match[6])
+        } : null;
       }).filter(Boolean).reverse();
+    }
+
+    function getBrowser(userAgent) {
+      const browsers = [
+        ["Edge", /Edg(?:e|A|iOS)?\/([\d.]+)/],
+        ["Opera", /(?:OPR|Opera)\/([\d.]+)/],
+        ["Samsung Internet", /SamsungBrowser\/([\d.]+)/],
+        ["Firefox", /(?:Firefox|FxiOS)\/([\d.]+)/],
+        ["Chrome", /(?:Chrome|CriOS)\/([\d.]+)/],
+        ["Safari", /Version\/([\d.]+).*Safari/]
+      ];
+
+      for (const [name, pattern] of browsers) {
+        const match = userAgent.match(pattern);
+        if (match) return `${name} ${match[1]}`;
+      }
+
+      return "Tidak diketahui";
     }
 
     function renderEntries() {
       const query = searchElement.value.trim().toLowerCase();
-      const visibleEntries = entries.filter((entry) => `${entry.ip} ${entry.path} ${entry.method} ${entry.status}`.toLowerCase().includes(query));
+      const visibleEntries = entries.filter((entry) => `${entry.ip} ${entry.path} ${entry.browser} ${entry.method} ${entry.status}`.toLowerCase().includes(query));
       const totalPages = Math.max(1, Math.ceil(visibleEntries.length / pageSize));
       currentPage = Math.min(currentPage, totalPages);
       const startIndex = (currentPage - 1) * pageSize;
@@ -125,7 +151,7 @@
         const row = document.createElement("tr");
         const cell = document.createElement("td");
         cell.className = "empty";
-        cell.colSpan = 5;
+        cell.colSpan = 6;
         cell.textContent = entries.length ? "Tidak ada hasil yang cocok." : "Belum ada request tercatat.";
         row.append(cell);
         entriesElement.append(row);
@@ -134,7 +160,7 @@
 
       for (const entry of pageEntries) {
         const row = document.createElement("tr");
-        for (const [value, className] of [[entry.ip, "ip"], [entry.time, "time"], [entry.path, "path"], [entry.method, ""], [entry.status, "status-code"]]) {
+        for (const [value, className] of [[entry.ip, "ip"], [entry.time, "time"], [entry.path, "path"], [entry.browser, "browser"], [entry.method, ""], [entry.status, "status-code"]]) {
           const cell = document.createElement("td");
           cell.className = className;
           cell.textContent = value;
