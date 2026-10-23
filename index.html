@@ -332,13 +332,9 @@
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
     }
   </style>
-  <style>
-    #visitor-ip-banner { display: flex; min-height: 34px; align-items: center; justify-content: center; padding: 7px 16px; background: var(--ink); color: white; font-size: 10px; font-weight: 600; text-align: center; }
-  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Lewati ke konten</a>
-  <div id="visitor-ip-banner" aria-live="polite">IP pengunjung: Memuat...</div>
   <header class="site-header">
     <nav class="nav wrap" aria-label="Navigasi utama">
       <a class="brand" href="#top" aria-label="Kost Tiga A, kembali ke atas">
@@ -553,19 +549,6 @@
     <a class="button button-wa" href="https://wa.me/628990004926?text=Halo%20Admin%20Kost%20Athaya%2C%20mau%20tanya%20kamar" target="_blank" rel="noopener noreferrer">Chat Athaya</a>
     <a class="button button-wa-alya" href="https://wa.me/6289679059555?text=Halo%20Admin%20Kost%20Putri%3A%20Alya%2C%20mau%20tanya%20kamar" target="_blank" rel="noopener noreferrer">Chat Alya</a>
   </div>
-  <script>
-    fetch("https://api.ipify.org?format=json")
-      .then((response) => {
-        if (!response.ok) throw new Error("IP lookup failed");
-        return response.json();
-      })
-      .then((data) => {
-        document.getElementById("visitor-ip-banner").textContent = `IP pengunjung: ${data.ip}`;
-      })
-      .catch(() => {
-        document.getElementById("visitor-ip-banner").textContent = "IP pengunjung: Tidak tersedia";
-      });
-  </script>
   <script src="review-exit.js" defer></script>
   <script src="counter.js" defer></script>
 </body>
