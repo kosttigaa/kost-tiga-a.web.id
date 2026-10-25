@@ -53,6 +53,38 @@ describe("static website server", () => {
     }
   });
 
+  it("supports conditional requests with ETag", async () => {
+    const first = await fetch(`${baseUrl}/index.html`);
+    const etag = first.headers.get("etag");
+    assert.ok(etag);
+    assert.equal(first.headers.get("cache-control"), "no-cache");
+    await first.arrayBuffer();
+
+    const second = await fetch(`${baseUrl}/index.html`, { headers: { "If-None-Match": etag } });
+    assert.equal(second.status, 304);
+    assert.equal(second.headers.get("etag"), etag);
+  });
+
+  it("compresses text files and caches media for a week", async () => {
+    for (const encoding of ["br", "gzip"]) {
+      const response = await fetch(`${baseUrl}/index.html`, {
+        headers: { "Accept-Encoding": encoding },
+      });
+      assert.equal(response.headers.get("content-encoding"), encoding);
+      assert.equal(response.headers.get("vary"), "Accept-Encoding");
+      assert.match(await response.text(), /Kost Tiga A/);
+    }
+
+    const plain = await fetch(`${baseUrl}/index.html`, { headers: { "Accept-Encoding": "identity" } });
+    assert.equal(plain.headers.get("content-encoding"), null);
+    await plain.arrayBuffer();
+
+    const video = await fetch(`${baseUrl}/img/athaya%201.mp4`, { headers: { Range: "bytes=0-9" } });
+    assert.equal(video.headers.get("cache-control"), "public, max-age=604800");
+    assert.equal(video.headers.get("content-encoding"), null);
+    await video.arrayBuffer();
+  });
+
   it("returns explicit errors for missing files and unsupported methods", async () => {
     const missingResponse = await fetch(`${baseUrl}/missing.html`);
     assert.equal(missingResponse.status, 404);

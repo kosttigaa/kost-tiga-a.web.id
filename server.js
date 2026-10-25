@@ -1,8 +1,13 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { brotliCompress, constants as zlibConstants, gzip } from "node:zlib";
+import { promisify } from "node:util";
+
+const brotliCompressAsync = promisify(brotliCompress);
+const gzipAsync = promisify(gzip);
 
 const publicRoot = path.dirname(fileURLToPath(import.meta.url));
 const contentTypes = new Map([
@@ -22,6 +27,75 @@ const contentTypes = new Map([
 ]);
 const privateFiles = new Set(["server.js"]);
 const privateDirectories = new Set(["test"]);
+const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
+const longCacheTypes = new Set([".mp4", ".avif", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp"]);
+const compressedCache = new Map();
+const maxCompressedEntries = 100;
+const minCompressSize = 1024;
+
+function getCacheControl(extension) {
+  if (longCacheTypes.has(extension)) {
+    return "public, max-age=604800";
+  }
+  if (extension === ".svg") {
+    return "public, max-age=86400";
+  }
+  return "no-cache";
+}
+
+function getEtag(fileInfo) {
+  return `W/"${fileInfo.size.toString(16)}-${Math.floor(fileInfo.mtimeMs).toString(16)}"`;
+}
+
+function matchesEtag(header, etag) {
+  if (!header) {
+    return false;
+  }
+  if (header.trim() === "*") {
+    return true;
+  }
+  const normalize = (value) => value.trim().replace(/^W\//, "");
+  return header.split(",").some((candidate) => normalize(candidate) === normalize(etag));
+}
+
+function chooseEncoding(acceptEncoding = "") {
+  const accepted = new Set(
+    acceptEncoding
+      .split(",")
+      .map((part) => part.trim().toLowerCase())
+      .filter((part) => part && !/;\s*q=0(\.0*)?$/.test(part))
+      .map((part) => part.split(";")[0]),
+  );
+  if (accepted.has("br")) {
+    return "br";
+  }
+  if (accepted.has("gzip")) {
+    return "gzip";
+  }
+  return null;
+}
+
+async function getCompressedBody(filePath, encoding, etag) {
+  const key = `${filePath}|${encoding}|${etag}`;
+  const cached = compressedCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const source = await readFile(filePath);
+  const body =
+    encoding === "br"
+      ? await brotliCompressAsync(source, {
+          params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9, [zlibConstants.BROTLI_PARAM_SIZE_HINT]: source.length },
+        })
+      : await gzipAsync(source, { level: 9 });
+
+  if (compressedCache.size >= maxCompressedEntries) {
+    compressedCache.clear();
+  }
+  compressedCache.set(key, body);
+  return body;
+}
 
 function sendError(response, statusCode, message, headers = {}) {
   response.writeHead(statusCode, {
@@ -120,12 +194,42 @@ async function serveStaticFile(request, response) {
     return;
   }
 
+  const extension = path.extname(filePath).toLowerCase();
+  const etag = getEtag(fileInfo);
   const headers = {
     "Accept-Ranges": "bytes",
-    "Cache-Control": "no-cache",
+    "Cache-Control": getCacheControl(extension),
     "Content-Type": contentType,
+    ETag: etag,
+    "Last-Modified": fileInfo.mtime.toUTCString(),
     "X-Content-Type-Options": "nosniff",
   };
+  const isCompressible = compressibleTypes.has(extension);
+  if (isCompressible) {
+    headers.Vary = "Accept-Encoding";
+  }
+
+  if (matchesEtag(request.headers["if-none-match"], etag)) {
+    delete headers["Content-Type"];
+    response.writeHead(304, headers);
+    response.end();
+    return;
+  }
+
+  const encoding =
+    isCompressible && !request.headers.range && fileInfo.size >= minCompressSize
+      ? chooseEncoding(request.headers["accept-encoding"])
+      : null;
+  if (encoding) {
+    const body = await getCompressedBody(filePath, encoding, etag);
+    delete headers["Accept-Ranges"];
+    headers["Content-Encoding"] = encoding;
+    headers["Content-Length"] = body.length;
+    response.writeHead(200, headers);
+    response.end(request.method === "HEAD" ? undefined : body);
+    return;
+  }
+
   let streamOptions;
 
   if (request.headers.range) {
