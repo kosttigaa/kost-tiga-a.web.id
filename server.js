@@ -220,6 +220,38 @@ async function handleClick(request, response, store) {
   response.writeHead(204, { "Cache-Control": "no-store" });
   response.end();
 }
+async function handleRooms(request, response, dataDir) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+    return;
+  }
+
+  const rooms = {};
+  try {
+    const saved = JSON.parse(await readFile(path.join(dataDir, "rooms.json"), "utf8"));
+    for (const target of clickTargets) {
+      const entry = saved?.[target];
+      if (Number.isSafeInteger(entry?.available) && entry.available >= 0 && entry.available <= 99) {
+        rooms[target] = { available: entry.available };
+      }
+    }
+    if (typeof saved?.updatedAt === "string" && !Number.isNaN(Date.parse(saved.updatedAt))) {
+      rooms.updatedAt = saved.updatedAt;
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) {
+      throw error;
+    }
+  }
+
+  response.writeHead(200, {
+    "Cache-Control": "no-cache",
+    "Content-Type": "application/json; charset=utf-8",
+    "X-Content-Type-Options": "nosniff",
+  });
+  response.end(request.method === "HEAD" ? undefined : JSON.stringify(rooms));
+}
+
 const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
 const longCacheTypes = new Set([".mp4", ".avif", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp"]);
 const compressedCache = new Map();
@@ -652,6 +684,8 @@ export function createServer({ dataDir = process.env.DATA_DIR || path.join(publi
       handler = handleClick(request, response, clickStore);
     } else if (pathname === "/api/visitors") {
       handler = handleVisitors(request, response, visitorStore);
+    } else if (pathname === "/api/rooms") {
+      handler = handleRooms(request, response, dataDir);
     } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
       handler = serveHome(request, response);
     } else {

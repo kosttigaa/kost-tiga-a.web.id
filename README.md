@@ -32,6 +32,18 @@ Untuk produksi, atur `DATA_DIR` ke folder di luar web root yang bisa ditulis use
 
 Halaman `/` memilih salah satu dari enam tema di server dan menyimpannya di cookie `kost-variant` (1 tahun, HttpOnly). Tema langsung benar pada respons pertama, tanpa kedipan atau fetch tambahan. Skrip pemilih di `index.html` tetap ada sebagai cadangan jika situs dilayani sebagai file statis.
 
+## Status ketersediaan kamar
+
+Jumlah kamar kosong tiap kost disimpan di `rooms.json` pada folder `DATA_DIR`, dibaca lewat `GET /api/rooms`, dan ditampilkan sebagai lencana di kartu kost oleh [rooms-status.js](./rooms-status.js). Jika belum diatur, lencana tidak muncul. Ubah lewat CLI (di VPS dijalankan sebagai `www-data` agar file bisa ditulis):
+
+```bash
+sudo -u www-data DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js alya 2
+sudo -u www-data DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js athaya 0
+DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js   # lihat status
+```
+
+Angka 0 menampilkan "Kamar penuh". Perubahan langsung tampil tanpa restart.
+
 ## Tes
 
 ```sh

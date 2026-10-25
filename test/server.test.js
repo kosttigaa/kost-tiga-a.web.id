@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { buildContentSecurityPolicy, createServer } from "../server.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("static website server", () => {
   let dataDir;
@@ -252,6 +257,31 @@ describe("static website server", () => {
       if (response.status === 429) limited += 1;
     }
     assert.ok(limited > 0);
+  });
+
+  it("reports room availability from the CLI and ignores bad data", async () => {
+    const empty = await fetch(`${baseUrl}/api/rooms`);
+    assert.equal(empty.status, 200);
+    assert.deepEqual(await empty.json(), {});
+
+    const env = { ...process.env, DATA_DIR: dataDir };
+    const script = fileURLToPath(new URL("../scripts/rooms.js", import.meta.url));
+    await execFileAsync(process.execPath, [script, "alya", "2"], { env });
+    await execFileAsync(process.execPath, [script, "athaya", "0"], { env });
+    await assert.rejects(execFileAsync(process.execPath, [script, "alya", "-1"], { env }));
+    await assert.rejects(execFileAsync(process.execPath, [script, "other", "1"], { env }));
+
+    const response = await fetch(`${baseUrl}/api/rooms`);
+    const rooms = await response.json();
+    assert.equal(response.headers.get("cache-control"), "no-cache");
+    assert.deepEqual({ alya: rooms.alya, athaya: rooms.athaya }, { alya: { available: 2 }, athaya: { available: 0 } });
+    assert.ok(!Number.isNaN(Date.parse(rooms.updatedAt)));
+
+    await writeFile(path.join(dataDir, "rooms.json"), JSON.stringify({ alya: { available: "x" }, athaya: { available: 500 } }));
+    assert.deepEqual(await (await fetch(`${baseUrl}/api/rooms`)).json(), {});
+
+    assert.equal((await fetch(`${baseUrl}/api/rooms`, { method: "POST" })).status, 405);
+    await rm(path.join(dataDir, "rooms.json"));
   });
 
   it("does not expose the data and scripts directories", async () => {
