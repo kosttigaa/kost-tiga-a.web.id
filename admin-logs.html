@@ -109,18 +109,40 @@
     let entries = [];
     let currentPage = 1;
 
-    function parseLog(text) {
-      return text.trim().split("\n").filter(Boolean).map((line) => {
-        const match = line.match(/^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+)(?: [^"]*)?" (\d{3}) \S+ "[^"]*" "([^"]*)"$/);
-        return match ? {
-          ip: match[1],
-          time: match[2],
-          method: match[3],
-          path: match[4],
-          status: match[5],
-          browser: getBrowser(match[6])
-        } : null;
-      }).filter(Boolean).reverse();
+    function parseLog(payload) {
+      let entries;
+      if (typeof payload === "string") {
+        try {
+          entries = JSON.parse(payload);
+        } catch {
+          return payload.trim().split("\n").filter(Boolean).map((line) => {
+            const match = line.match(/^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+)(?: [^"]*)?" (\d{3}) \S+ "[^"]*" "([^"]*)"$/);
+            return match ? {
+              ip: match[1],
+              time: match[2],
+              method: match[3],
+              path: match[4],
+              status: match[5],
+              browser: getBrowser(match[6])
+            } : null;
+          }).filter(Boolean).reverse();
+        }
+      } else {
+        entries = payload;
+      }
+      if (!Array.isArray(entries)) throw new Error("Format log tidak valid.");
+      return entries.map((entry) => ({
+        ip: entry.ip,
+        time: new Intl.DateTimeFormat("id-ID", {
+          timeZone: "Asia/Jakarta",
+          dateStyle: "medium",
+          timeStyle: "medium"
+        }).format(new Date(entry.time)) + " WIB",
+        method: entry.method,
+        path: entry.path,
+        status: String(entry.status),
+        browser: getBrowser(entry.userAgent)
+      }));
     }
 
     function getBrowser(userAgent) {

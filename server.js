@@ -152,6 +152,60 @@ function createClickStore(dataDir) {
   };
 }
 
+function createAccessLogStore(dataDir) {
+  const file = path.join(dataDir, "access.jsonl");
+  const maxEntries = 10_000;
+  let writesSinceCompact = 0;
+  let queue = Promise.resolve();
+
+  async function compact() {
+    const lines = (await readOptional(file)).split("\n").filter(Boolean).slice(-maxEntries);
+    await writeFile(`${file}.tmp`, `${lines.join("\n")}${lines.length ? "\n" : ""}`);
+    await rename(`${file}.tmp`, file);
+  }
+
+  return {
+    record(entry) {
+      const task = queue.then(async () => {
+        await mkdir(dataDir, { recursive: true });
+        await appendFile(file, `${JSON.stringify(entry)}\n`);
+        writesSinceCompact += 1;
+        if (writesSinceCompact >= 250) {
+          writesSinceCompact = 0;
+          await compact();
+        }
+      });
+      queue = task.catch((error) => {
+        console.error("Failed to record access log:", error);
+      });
+      return queue;
+    },
+    read() {
+      return queue.then(async () => {
+        const lines = (await readOptional(file)).split("\n").filter(Boolean).slice(-maxEntries);
+        return lines.flatMap((line) => {
+          try {
+            const entry = JSON.parse(line);
+            return typeof entry.ip === "string" &&
+              typeof entry.time === "string" &&
+              typeof entry.path === "string" &&
+              typeof entry.method === "string" &&
+              Number.isInteger(entry.status) &&
+              typeof entry.userAgent === "string"
+              ? [entry]
+              : [];
+          } catch {
+            return [];
+          }
+        }).slice(-1000).reverse();
+      });
+    },
+    flush() {
+      return queue;
+    },
+  };
+}
+
 function readSmallBody(request) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -455,10 +509,42 @@ ${table("Per posisi tombol", clicks.slot)}
   });
 }
 
-function isAdmin(request, adminSecret) {
-  const supplied = Buffer.from(String(request.headers["x-admin-secret"] ?? ""));
-  const expected = Buffer.from(adminSecret ?? "");
+function matchesSecret(suppliedValue, expectedValue) {
+  const supplied = Buffer.from(String(suppliedValue ?? ""));
+  const expected = Buffer.from(expectedValue ?? "");
   return expected.length > 0 && supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
+function isAdmin(request, auth) {
+  const authorization = request.headers.authorization ?? "";
+  const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/.exec(authorization);
+  if (match && auth.adminUser && auth.adminPassword) {
+    const decoded = Buffer.from(match[1], "base64").toString("utf8");
+    const separator = decoded.indexOf(":");
+    if (
+      separator >= 0 &&
+      matchesSecret(decoded.slice(0, separator), auth.adminUser) &&
+      matchesSecret(decoded.slice(separator + 1), auth.adminPassword)
+    ) {
+      return true;
+    }
+  }
+  return matchesSecret(request.headers["x-admin-secret"], auth.adminSecret);
+}
+
+function rejectAdmin(response, auth) {
+  if (auth.adminUser && auth.adminPassword) {
+    sendError(response, 401, "Authentication Required", {
+      "Cache-Control": "no-store",
+      "WWW-Authenticate": 'Basic realm="Kost Tiga A", charset="UTF-8"',
+    });
+    return;
+  }
+  if (auth.adminSecret) {
+    sendError(response, 404, "Not Found");
+    return;
+  }
+  sendError(response, 503, "Admin authentication is not configured");
 }
 
 let roomsWriteQueue = Promise.resolve();
@@ -517,9 +603,9 @@ ${fieldsets}
   });
 }
 
-async function handleAdminRooms(request, response, dataDir, adminSecret) {
-  if (!isAdmin(request, adminSecret)) {
-    sendError(response, 404, "Not Found");
+async function handleAdminRooms(request, response, dataDir, auth) {
+  if (!isAdmin(request, auth)) {
+    rejectAdmin(response, auth);
     return;
   }
 
@@ -581,9 +667,9 @@ async function handleAdminRooms(request, response, dataDir, adminSecret) {
   response.end(request.method === "HEAD" ? undefined : body);
 }
 
-async function handleAdminStats(request, response, dataDir, adminSecret) {
-  if (!isAdmin(request, adminSecret)) {
-    sendError(response, 404, "Not Found");
+async function handleAdminStats(request, response, dataDir, auth) {
+  if (!isAdmin(request, auth)) {
+    rejectAdmin(response, auth);
     return;
   }
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -613,6 +699,36 @@ async function handleAdminStats(request, response, dataDir, adminSecret) {
     "X-Robots-Tag": "noindex, nofollow",
   });
   response.end(request.method === "HEAD" ? undefined : body);
+}
+
+async function handleAdminLogs(request, response, accessLogs, auth) {
+  if (!isAdmin(request, auth)) {
+    rejectAdmin(response, auth);
+    return;
+  }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+    return;
+  }
+
+  const pathname = new URL(request.url, "http://localhost").pathname;
+  if (pathname === "/admin/logs/data") {
+    const body = JSON.stringify(await accessLogs.read());
+    response.writeHead(200, {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Length": Buffer.byteLength(body),
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow",
+    });
+    response.end(request.method === "HEAD" ? undefined : body);
+    return;
+  }
+  if (pathname !== "/admin/logs" && pathname !== "/admin/logs/") {
+    sendError(response, 404, "Not Found");
+    return;
+  }
+  await serveStaticFile(request, response, "admin-logs.html");
 }
 
 const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
@@ -945,7 +1061,7 @@ function getByteRange(value, size) {
   return { start, end };
 }
 
-async function serveStaticFile(request, response) {
+async function serveStaticFile(request, response, requestedPathOverride) {
   if (request.method !== "GET" && request.method !== "HEAD") {
     sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
     return;
@@ -976,7 +1092,7 @@ async function serveStaticFile(request, response) {
     return;
   }
 
-  const requestedPath = decodedPath === "/" ? "index.html" : decodedPath.slice(1);
+  const requestedPath = requestedPathOverride ?? (decodedPath === "/" ? "index.html" : decodedPath.slice(1));
   const filePath = path.resolve(publicRoot, requestedPath);
   const relativePath = path.relative(publicRoot, filePath);
   if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
@@ -1010,12 +1126,15 @@ async function serveStaticFile(request, response) {
   const etag = getEtag(fileInfo);
   const headers = {
     "Accept-Ranges": "bytes",
-    "Cache-Control": getCacheControl(extension),
+    "Cache-Control": requestedPathOverride ? "no-store" : getCacheControl(extension),
     "Content-Type": contentType,
     ETag: etag,
     "Last-Modified": fileInfo.mtime.toUTCString(),
     "X-Content-Type-Options": "nosniff",
   };
+  if (requestedPathOverride) {
+    headers["X-Robots-Tag"] = "noindex, nofollow";
+  }
   const isCompressible = compressibleTypes.has(extension);
   if (isCompressible) {
     headers.Vary = "Accept-Encoding";
@@ -1087,12 +1206,37 @@ async function serveStaticFile(request, response) {
 export function createServer({
   dataDir = process.env.DATA_DIR || path.join(publicRoot, "data"),
   adminSecret = process.env.ADMIN_SECRET,
+  adminUser = process.env.ADMIN_USER,
+  adminPassword = process.env.ADMIN_PASSWORD,
 } = {}) {
+  if (Boolean(adminUser) !== Boolean(adminPassword)) {
+    throw new Error("ADMIN_USER and ADMIN_PASSWORD must be configured together.");
+  }
+  if (adminUser?.includes(":")) {
+    throw new Error("ADMIN_USER must not contain a colon.");
+  }
+  const adminAuth = { adminUser, adminPassword, adminSecret };
   const clickStore = createClickStore(dataDir);
   const visitorStore = createVisitorStore(dataDir);
+  const accessLogs = createAccessLogStore(dataDir);
 
-  return createHttpServer((request, response) => {
+  const server = createHttpServer((request, response) => {
     setSecurityHeaders(request, response);
+    response.once("finish", () => {
+      let clientIp = request.socket.remoteAddress ?? "unknown";
+      if (clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::ffff:127.0.0.1") {
+        clientIp = request.headers["x-real-ip"] ?? clientIp;
+      }
+      const entry = {
+        ip: clientIp,
+        time: new Date().toISOString(),
+        method: request.method ?? "UNKNOWN",
+        path: new URL(request.url, "http://localhost").pathname,
+        status: response.statusCode,
+        userAgent: request.headers["user-agent"] ?? "",
+      };
+      void accessLogs.record(entry);
+    });
     const { pathname } = new URL(request.url, "http://localhost");
     let handler;
     if (pathname === "/api/click") {
@@ -1101,10 +1245,12 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
+    } else if (pathname === "/admin/logs" || pathname === "/admin/logs/" || pathname === "/admin/logs/data") {
+      handler = handleAdminLogs(request, response, accessLogs, adminAuth);
     } else if (pathname === "/admin/stats") {
-      handler = handleAdminStats(request, response, dataDir, adminSecret);
+      handler = handleAdminStats(request, response, dataDir, adminAuth);
     } else if (pathname === "/admin/kamar") {
-      handler = handleAdminRooms(request, response, dataDir, adminSecret);
+      handler = handleAdminRooms(request, response, dataDir, adminAuth);
     } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
       handler = serveHome(request, response, dataDir);
     } else {
@@ -1119,6 +1265,8 @@ export function createServer({
       }
     });
   });
+  server.flushAccessLogs = () => accessLogs.flush();
+  return server;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

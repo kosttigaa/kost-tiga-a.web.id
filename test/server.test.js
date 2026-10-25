@@ -11,6 +11,13 @@ import { buildContentSecurityPolicy, createServer, formatUpdatedTime, summarizeC
 
 const execFileAsync = promisify(execFile);
 
+async function closeTestServer(testServer) {
+  await new Promise((resolve, reject) => {
+    testServer.close((error) => (error ? reject(error) : resolve()));
+  });
+  await testServer.flushAccessLogs();
+}
+
 describe("static website server", () => {
   let dataDir;
   let server;
@@ -24,9 +31,7 @@ describe("static website server", () => {
   });
 
   after(async () => {
-    await new Promise((resolve, reject) => {
-      server.close((error) => (error ? reject(error) : resolve()));
-    });
+    await closeTestServer(server);
     await rm(dataDir, { recursive: true, force: true });
   });
 
@@ -336,11 +341,55 @@ describe("static website server", () => {
       assert.ok(!html.includes("<b>x</b>"));
       assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 405);
     } finally {
-      await new Promise((resolve) => statsServer.close(resolve));
+      await closeTestServer(statsServer);
       await rm(statsDir, { recursive: true, force: true });
     }
 
-    assert.equal((await fetch(`${baseUrl}/admin/stats`, { headers: { "X-Admin-Secret": "" } })).status, 404);
+    assert.equal((await fetch(`${baseUrl}/admin/stats`, { headers: { "X-Admin-Secret": "" } })).status, 503);
+  });
+
+  it("serves all admin dashboards with shared Basic Auth and records Node requests", async () => {
+    const password = "a-strong-test-password";
+    const logsDir = await mkdtemp(path.join(tmpdir(), "kost-admin-logs-"));
+    const logsServer = createServer({ dataDir: logsDir, adminUser: "admin", adminPassword: password });
+    await new Promise((resolve) => logsServer.listen(0, "127.0.0.1", resolve));
+    const origin = `http://127.0.0.1:${logsServer.address().port}`;
+    const auth = {
+      Authorization: `Basic ${Buffer.from(`admin:${password}`).toString("base64")}`,
+    };
+    try {
+      const unauthenticated = await fetch(`${origin}/admin/logs`);
+      assert.equal(unauthenticated.status, 401);
+      assert.match(unauthenticated.headers.get("www-authenticate"), /^Basic realm=/);
+
+      const page = await fetch(`${origin}/admin/logs`, { headers: auth });
+      assert.equal(page.status, 200);
+      assert.equal(page.headers.get("cache-control"), "no-store");
+      assert.match(await page.text(), /Log Akses/);
+
+      const home = await fetch(origin, { headers: { "User-Agent": "TestBrowser/1.0" } });
+      assert.equal(home.status, 200);
+      await home.arrayBuffer();
+
+      const stats = await fetch(`${origin}/admin/stats`, { headers: auth });
+      assert.equal(stats.status, 200);
+      await stats.arrayBuffer();
+
+      const rooms = await fetch(`${origin}/admin/kamar`, { headers: auth });
+      assert.equal(rooms.status, 200);
+      await rooms.arrayBuffer();
+
+      const logResponse = await fetch(`${origin}/admin/logs/data`, { headers: auth });
+      assert.equal(logResponse.status, 200);
+      const entries = await logResponse.json();
+      assert.ok(entries.some((entry) => entry.path === "/" && entry.status === 200 && entry.userAgent === "TestBrowser/1.0"));
+      assert.ok(entries.some((entry) => entry.path === "/admin/stats" && entry.status === 200));
+      assert.ok(entries.some((entry) => entry.path === "/admin/kamar" && entry.status === 200));
+      assert.ok((await readFile(path.join(logsDir, "access.jsonl"), "utf8")).includes("/admin/logs"));
+    } finally {
+      await closeTestServer(logsServer);
+      await rm(logsDir, { recursive: true, force: true });
+    }
   });
 
   it("lets the admin update room availability through a protected form", async () => {
@@ -392,7 +441,7 @@ describe("static website server", () => {
       const updated = JSON.parse(await readFile(path.join(formDir, "rooms.json"), "utf8"));
       assert.deepEqual(updated.alya, { ac: 1, nonac: 0 });
     } finally {
-      await new Promise((resolve) => formServer.close(resolve));
+      await closeTestServer(formServer);
       await rm(formDir, { recursive: true, force: true });
     }
   });
@@ -428,7 +477,7 @@ describe("static website server", () => {
       assert.ok(after.includes(formatUpdatedTime(future).label));
       assert.equal(new Date(response.headers.get("last-modified")).getTime(), Math.floor(future.getTime() / 1000) * 1000);
     } finally {
-      await new Promise((resolve) => stampServer.close(resolve));
+      await closeTestServer(stampServer);
       await rm(stampDir, { recursive: true, force: true });
     }
   });
@@ -466,7 +515,7 @@ describe("static website server", () => {
       assert.equal((await (await fetch(url)).json()).value, 10);
       assert.equal((await (await fetch(url, { method: "POST" })).json()).value, 11);
     } finally {
-      await new Promise((resolve) => restarted.close(resolve));
+      await closeTestServer(restarted);
     }
 
     let limited = 0;

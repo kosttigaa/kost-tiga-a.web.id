@@ -47,23 +47,49 @@ Angka 0 menampilkan "penuh". Perubahan langsung tampil tanpa restart.
 
 ## Dasbor statistik
 
-`/admin/stats` menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar. Halaman ini hanya dilayani jika request membawa header `X-Admin-Secret` yang sama dengan env `ADMIN_SECRET`; tanpa env itu, atau dengan header salah, jawabannya 404. Di produksi nginx yang menambahkan header tersebut setelah basic auth:
+`/admin/logs`, `/admin/stats`, dan `/admin/kamar` dilayani Node.js dan memakai HTTP Basic Auth dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD` yang sama. Atur kedua environment variable tersebut sebelum menjalankan server. Jangan simpan password ke Git.
+
+Di PowerShell lokal:
+
+```powershell
+$env:ADMIN_USER = "admin"
+$env:ADMIN_PASSWORD = "pilih-password-lokal-yang-kuat"
+npm start
+```
+
+Di VPS, atur `ADMIN_USER` dan `ADMIN_PASSWORD` di drop-in systemd service Node. Gunakan kredensial yang sama dengan user/password pada file htpasswd Nginx. Nginx tetap melakukan Basic Auth, lalu meneruskan header `Authorization` ke Node untuk pemeriksaan kedua:
+
+```ini
+[Service]
+Environment=ADMIN_USER=nama-user-htpasswd
+Environment=ADMIN_PASSWORD=password-yang-sama-dengan-htpasswd
+```
+
+Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; jangan menaruhnya di repository atau mengirimkannya lewat chat. Simpan konfigurasi, lalu jalankan `sudo systemctl daemon-reload`.
 
 ```nginx
-location = /admin/stats {
-    auth_basic "Admin";
-    auth_basic_user_file /etc/nginx/.htpasswd;   # samakan dengan yang dipakai /admin/logs
-    proxy_set_header X-Admin-Secret "ISI_RAHASIA";
+location ^~ /admin/ {
+    auth_basic "Kost Tiga A";
+    auth_basic_user_file /etc/nginx/kost-tiga-a-logs.htpasswd;
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
     proxy_pass http://127.0.0.1:3000;
 }
 ```
 
-Nilai `ISI_RAHASIA` sama dengan `ADMIN_SECRET` di unit systemd (`Environment=ADMIN_SECRET=...`). Untuk mencoba lokal: `ADMIN_SECRET=abc npm start`, lalu `curl -H "X-Admin-Secret: abc" http://localhost:3000/admin/stats`.
+Sebelum memakai blok tersebut, hapus/ganti semua location Nginx lama yang khusus menangani `/admin/logs`, `/admin/stats`, atau `/admin/kamar`; location exact yang lama akan tetap mengalahkan blok di atas. Setelah perubahan Nginx, uji dengan `sudo nginx -t` lalu reload Nginx. Pastikan password yang dipakai Basic Auth cocok dengan `ADMIN_USER`/`ADMIN_PASSWORD` di systemd.
+
+Urutan migrasi VPS: set pasangan environment baru, deploy file aplikasi, restart service Node, lalu ganti location Nginx dan reload. Untuk sementara, server masih menerima header rahasia lama pada statistik/form kamar dan halaman log masih bisa membaca format log Nginx lama, sehingga perpindahan bisa dilakukan bertahap. Setelah blok Nginx baru aktif, hapus konfigurasi `X-Admin-Secret` lama dan `ADMIN_SECRET` dari systemd, lalu restart service.
+
+`/admin/logs` menampilkan hingga 1.000 request terakhir yang mencapai Node.js. Data disimpan di `access.jsonl` di dalam `DATA_DIR` (hingga 10.000 baris); query string tidak dicatat. Di VPS, Nginx masih dapat menyajikan file aset statis secara langsung, jadi akses aset yang tidak diteruskan ke Node tidak muncul di dashboard log.
+
+`/admin/stats` menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar.
 
 ## Form kamar kosong (`/admin/kamar`)
 
-Alternatif dari CLI: form web yang nyaman dipakai dari HP. Dilindungi dengan cara yang sama seperti `/admin/stats` (header `X-Admin-Secret` dari nginx setelah basic auth), jadi tambahkan blok nginx yang sama untuk `location = /admin/kamar`. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. Karena browser mengirim basic auth otomatis, POST dari situs lain ditolak (header `Origin` harus sama dengan host).
+Alternatif dari CLI: form web yang nyaman dipakai dari HP dan dilindungi Basic Auth yang sama. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. Karena browser mengirim Basic Auth otomatis, POST dari situs lain ditolak (header `Origin` harus sama dengan host).
 
 ## Cap "Terakhir diperbarui"
 
