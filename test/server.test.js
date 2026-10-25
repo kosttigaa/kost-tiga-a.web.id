@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createServer } from "../server.js";
 
 describe("static website server", () => {
-  const server = createServer();
+  let dataDir;
+  let server;
   let baseUrl;
 
   before(async () => {
+    dataDir = await mkdtemp(path.join(tmpdir(), "kost-clicks-"));
+    server = createServer({ dataDir });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     baseUrl = `http://127.0.0.1:${server.address().port}`;
   });
@@ -16,7 +22,11 @@ describe("static website server", () => {
     await new Promise((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
+    await rm(dataDir, { recursive: true, force: true });
   });
+
+  const postClick = (body, headers = {}) =>
+    fetch(`${baseUrl}/api/click`, { method: "POST", body: typeof body === "string" ? body : JSON.stringify(body), headers });
 
   it("serves the homepage and existing page variants", async () => {
     for (const route of ["/", "/2.html", "/6.html"]) {
@@ -118,6 +128,70 @@ describe("static website server", () => {
     const missing = await fetch(`${baseUrl}/missing.html`);
     assert.equal(missing.status, 404);
     assert.equal(missing.headers.get("x-frame-options"), "SAMEORIGIN");
+  });
+
+  it("records valid WhatsApp clicks and rejects invalid ones", async () => {
+    const ok = await postClick({ target: "alya", page: "3.html", slot: "mobile-bar" });
+    assert.equal(ok.status, 204);
+
+    const sameOrigin = await postClick(
+      { target: "athaya", page: "index.html", slot: "kontak" },
+      { Origin: baseUrl },
+    );
+    assert.equal(sameOrigin.status, 204);
+
+    const lines = (await readFile(path.join(dataDir, "clicks.jsonl"), "utf8")).trim().split("\n");
+    assert.equal(lines.length, 2);
+    const entry = JSON.parse(lines[0]);
+    assert.deepEqual(Object.keys(entry).sort(), ["page", "slot", "target", "ts"]);
+    assert.equal(entry.target, "alya");
+
+    const invalid = [
+      { target: "other", page: "index.html", slot: "kontak" },
+      { target: "alya", page: "../etc/passwd", slot: "kontak" },
+      { target: "alya", page: "index.html", slot: "<script>" },
+      { target: "alya", page: "index.html" },
+    ];
+    for (const body of invalid) {
+      assert.equal((await postClick(body)).status, 400, JSON.stringify(body));
+    }
+    assert.equal((await postClick("not json")).status, 400);
+
+    const foreign = await postClick(
+      { target: "alya", page: "index.html", slot: "kontak" },
+      { Origin: "https://evil.example" },
+    );
+    assert.equal(foreign.status, 403);
+
+    const tooLarge = await postClick({ target: "alya", page: "index.html", slot: "kontak", pad: "x".repeat(2000) }).catch(
+      () => ({ status: 413 }),
+    );
+    assert.equal(tooLarge.status, 413);
+
+    const wrongMethod = await fetch(`${baseUrl}/api/click`);
+    assert.equal(wrongMethod.status, 405);
+    assert.equal(wrongMethod.headers.get("allow"), "POST");
+
+    const finalLines = (await readFile(path.join(dataDir, "clicks.jsonl"), "utf8")).trim().split("\n");
+    assert.equal(finalLines.length, 2);
+  });
+
+  it("limits click submissions per minute", async () => {
+    let limited = 0;
+    for (let i = 0; i < 130; i += 1) {
+      const response = await postClick({ target: "athaya", page: "2.html", slot: "pilihan" });
+      if (response.status === 429) limited += 1;
+    }
+    assert.ok(limited > 0);
+  });
+
+  it("does not expose the data and scripts directories", async () => {
+    for (const route of ["/data/clicks.jsonl", "/scripts/clicks.js"]) {
+      assert.equal((await fetch(`${baseUrl}${route}`)).status, 404, route);
+    }
+    const tracker = await fetch(`${baseUrl}/wa-track.js`);
+    assert.equal(tracker.status, 200);
+    await tracker.arrayBuffer();
   });
 
   it("returns explicit errors for missing files and unsupported methods", async () => {

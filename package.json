@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "clicks": "node scripts/clicks.js",
     "test": "node --test"
   },
   "engines": {

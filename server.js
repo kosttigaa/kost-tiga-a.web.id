@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,7 +27,104 @@ const contentTypes = new Map([
   [".webp", "image/webp"],
 ]);
 const privateFiles = new Set(["server.js"]);
-const privateDirectories = new Set(["test"]);
+const privateDirectories = new Set(["test", "data", "scripts"]);
+const clickTargets = new Set(["athaya", "alya"]);
+const clickPages = new Set(["index.html", "2.html", "3.html", "4.html", "5.html", "6.html"]);
+const clickSlotPattern = /^[a-z0-9-]{1,30}$/;
+const maxClickBodyBytes = 1024;
+const maxClicksPerMinute = 120;
+
+function createClickStore(dataDir) {
+  const file = path.join(dataDir, "clicks.jsonl");
+  let windowStart = 0;
+  let windowCount = 0;
+
+  return {
+    allow() {
+      const now = Date.now();
+      if (now - windowStart >= 60_000) {
+        windowStart = now;
+        windowCount = 0;
+      }
+      windowCount += 1;
+      return windowCount <= maxClicksPerMinute;
+    },
+    async append(entry) {
+      await mkdir(dataDir, { recursive: true });
+      await appendFile(file, `${JSON.stringify(entry)}\n`);
+    },
+  };
+}
+
+function readSmallBody(request) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > maxClickBodyBytes) {
+        request.destroy();
+        reject(Object.assign(new Error("Payload too large"), { statusCode: 413 }));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    request.on("error", reject);
+  });
+}
+
+async function handleClick(request, response, store) {
+  if (request.method !== "POST") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "POST" });
+    return;
+  }
+
+  const origin = request.headers.origin;
+  if (origin) {
+    let originHost;
+    try {
+      originHost = new URL(origin).host;
+    } catch {
+      originHost = null;
+    }
+    if (originHost !== request.headers.host) {
+      sendError(response, 403, "Forbidden");
+      return;
+    }
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(await readSmallBody(request));
+  } catch (error) {
+    if (error.statusCode === 413) {
+      sendError(response, 413, "Payload Too Large", { Connection: "close" });
+    } else {
+      sendError(response, 400, "Bad Request");
+    }
+    return;
+  }
+
+  const { target, page, slot } = payload ?? {};
+  if (!clickTargets.has(target) || !clickPages.has(page) || !clickSlotPattern.test(slot ?? "")) {
+    sendError(response, 400, "Bad Request");
+    return;
+  }
+
+  if (!store.allow()) {
+    sendError(response, 429, "Too Many Requests", { "Retry-After": "60" });
+    return;
+  }
+
+  try {
+    await store.append({ ts: new Date().toISOString(), target, page, slot });
+  } catch (error) {
+    console.error("Failed to record WhatsApp click:", error);
+  }
+  response.writeHead(204, { "Cache-Control": "no-store" });
+  response.end();
+}
 const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
 const longCacheTypes = new Set([".mp4", ".avif", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp"]);
 const compressedCache = new Map();
@@ -319,10 +416,16 @@ async function serveStaticFile(request, response) {
   stream.pipe(response);
 }
 
-export function createServer() {
+export function createServer({ dataDir = process.env.DATA_DIR || path.join(publicRoot, "data") } = {}) {
+  const clickStore = createClickStore(dataDir);
+
   return createHttpServer((request, response) => {
     setSecurityHeaders(request, response);
-    void serveStaticFile(request, response).catch((error) => {
+    const handler =
+      new URL(request.url, "http://localhost").pathname === "/api/click"
+        ? handleClick(request, response, clickStore)
+        : serveStaticFile(request, response);
+    void handler.catch((error) => {
       console.error("Failed to serve request:", error);
       if (!response.headersSent) {
         sendError(response, 500, "Internal Server Error");
