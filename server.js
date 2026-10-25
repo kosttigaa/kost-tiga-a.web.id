@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { appendFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
@@ -252,24 +252,27 @@ function setSecurityHeaders(request, response) {
   }
 }
 
+export function buildContentSecurityPolicy(html) {
+  const hashes = [];
+  for (const match of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    if (!/type\s*=\s*["']?(?!module)[^"'\s>]*json/i.test(match[1]) && match[2].trim()) {
+      hashes.push(`'sha256-${createHash("sha256").update(match[2]).digest("base64")}'`);
+    }
+  }
+  return [...cspDirectives, `script-src ${["'self'", ...hashes].join(" ")}`].join("; ");
+}
+
 async function getContentSecurityPolicy(filePath, etag) {
   const key = `${filePath}|${etag}`;
-  let scriptSources = scriptHashCache.get(key);
-  if (!scriptSources) {
-    const html = await readFile(filePath, "utf8");
-    const hashes = [];
-    for (const match of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi)) {
-      if (!/type\s*=\s*["']?(?!module)[^"'\s>]*json/i.test(match[1]) && match[2].trim()) {
-        hashes.push(`'sha256-${createHash("sha256").update(match[2]).digest("base64")}'`);
-      }
-    }
-    scriptSources = ["'self'", ...hashes].join(" ");
+  let policy = scriptHashCache.get(key);
+  if (!policy) {
+    policy = buildContentSecurityPolicy(await readFile(filePath, "utf8"));
     if (scriptHashCache.size >= maxCompressedEntries) {
       scriptHashCache.clear();
     }
-    scriptHashCache.set(key, scriptSources);
+    scriptHashCache.set(key, policy);
   }
-  return [...cspDirectives, `script-src ${scriptSources}`].join("; ");
+  return policy;
 }
 
 function getCacheControl(extension) {
@@ -314,6 +317,27 @@ function chooseEncoding(acceptEncoding = "") {
   return null;
 }
 
+async function compress(source, encoding) {
+  return encoding === "br"
+    ? brotliCompressAsync(source, {
+        params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9, [zlibConstants.BROTLI_PARAM_SIZE_HINT]: source.length },
+      })
+    : gzipAsync(source, { level: 9 });
+}
+
+function rememberCompressed(key, body) {
+  if (compressedCache.size >= maxCompressedEntries) {
+    compressedCache.clear();
+  }
+  compressedCache.set(key, body);
+  return body;
+}
+
+async function getCompressedBuffer(source, encoding, key) {
+  const cacheKey = `${key}|${encoding}`;
+  return compressedCache.get(cacheKey) ?? rememberCompressed(cacheKey, await compress(source, encoding));
+}
+
 async function getCompressedBody(filePath, encoding, etag) {
   const key = `${filePath}|${encoding}|${etag}`;
   const cached = compressedCache.get(key);
@@ -321,19 +345,124 @@ async function getCompressedBody(filePath, encoding, etag) {
     return cached;
   }
 
-  const source = await readFile(filePath);
-  const body =
-    encoding === "br"
-      ? await brotliCompressAsync(source, {
-          params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9, [zlibConstants.BROTLI_PARAM_SIZE_HINT]: source.length },
-        })
-      : await gzipAsync(source, { level: 9 });
+  return rememberCompressed(key, await compress(await readFile(filePath), encoding));
+}
 
-  if (compressedCache.size >= maxCompressedEntries) {
-    compressedCache.clear();
+const variantPages = ["index.html", "2.html", "3.html", "4.html", "5.html", "6.html"];
+const variantCookieName = "kost-variant";
+const variantCookieMaxAge = 60 * 60 * 24 * 365;
+const renderedHomeCache = new Map();
+const maxRenderedHomeEntries = 20;
+
+function readVariantCookie(header = "") {
+  for (const part of header.split(";")) {
+    const [name, ...value] = part.trim().split("=");
+    if (name === variantCookieName) {
+      const selected = value.join("=");
+      return variantPages.includes(selected) ? selected : null;
+    }
   }
-  compressedCache.set(key, body);
-  return body;
+  return null;
+}
+
+// Menyalin perilaku skrip pemilih tema di index.html: hanya tema yang diganti, isi halaman tetap dari index.html
+function applyVariant(indexHtml, variantHtml, variant) {
+  let html = indexHtml.replace(/<script>([\s\S]*?)<\/script>\s*/g, (match, body) =>
+    body.includes("kost-tiga-a-page-variant") ? "" : match,
+  );
+
+  if (variantHtml !== null) {
+    const style = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(variantHtml);
+    if (style) {
+      html = html.replace(/(<style id="variant-theme">)[\s\S]*?(<\/style>)/, (match, open, close) => open + style[1] + close);
+    }
+
+    const fontLink = /<link\b[^>]*href="https:\/\/fonts\.googleapis\.com\/css2[^"]*"[^>]*>/gi;
+    const variantFonts = variantHtml.match(fontLink);
+    if (variantFonts) {
+      let replaced = false;
+      html = html.replace(fontLink, () => {
+        if (replaced) {
+          return "";
+        }
+        replaced = true;
+        return variantFonts.join("\n  ");
+      });
+    }
+
+    const themeColor = /<meta name="theme-color" content="[^"]*">/.exec(variantHtml);
+    if (themeColor) {
+      html = html.replace(/<meta name="theme-color" content="[^"]*">/, () => themeColor[0]);
+    }
+  }
+
+  return html.replace(/<html\b([^>]*)>/i, (match, attributes) => `<html${attributes} data-variant="${variant}">`);
+}
+
+async function renderHome(variant) {
+  const indexPath = path.join(publicRoot, "index.html");
+  const variantPath = path.join(publicRoot, variant);
+  const [indexInfo, variantInfo] = await Promise.all([stat(indexPath), stat(variantPath)]);
+  const key = `${variant}|${indexInfo.mtimeMs}|${variantInfo.mtimeMs}`;
+
+  let entry = renderedHomeCache.get(key);
+  if (!entry) {
+    const [indexHtml, variantHtml] = await Promise.all([
+      readFile(indexPath, "utf8"),
+      variant === "index.html" ? null : readFile(variantPath, "utf8"),
+    ]);
+    const html = applyVariant(indexHtml, variantHtml, variant);
+    const body = Buffer.from(html);
+    entry = {
+      body,
+      csp: buildContentSecurityPolicy(html),
+      etag: `W/"${createHash("sha256").update(body).digest("hex").slice(0, 16)}"`,
+      lastModified: new Date(Math.max(indexInfo.mtimeMs, variantInfo.mtimeMs)).toUTCString(),
+    };
+    if (renderedHomeCache.size >= maxRenderedHomeEntries) {
+      renderedHomeCache.clear();
+    }
+    renderedHomeCache.set(key, entry);
+  }
+  return entry;
+}
+
+async function serveHome(request, response) {
+  const cookieVariant = readVariantCookie(request.headers.cookie);
+  const variant = cookieVariant ?? variantPages[randomInt(variantPages.length)];
+  const entry = await renderHome(variant);
+
+  const headers = {
+    "Cache-Control": "private, no-cache",
+    "Content-Security-Policy": entry.csp,
+    "Content-Type": contentTypes.get(".html"),
+    ETag: entry.etag,
+    "Last-Modified": entry.lastModified,
+    Vary: "Accept-Encoding, Cookie",
+    "X-Content-Type-Options": "nosniff",
+  };
+  if (!cookieVariant) {
+    const secure = request.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
+    headers["Set-Cookie"] =
+      `${variantCookieName}=${variant}; Max-Age=${variantCookieMaxAge}; Path=/; HttpOnly; SameSite=Lax${secure}`;
+  }
+
+  if (matchesEtag(request.headers["if-none-match"], entry.etag)) {
+    delete headers["Content-Type"];
+    response.writeHead(304, headers);
+    response.end();
+    return;
+  }
+
+  let body = entry.body;
+  const encoding = chooseEncoding(request.headers["accept-encoding"]);
+  if (encoding) {
+    body = await getCompressedBuffer(entry.body, encoding, `home|${entry.etag}`);
+    headers["Content-Encoding"] = encoding;
+  }
+  headers["Content-Length"] = body.length;
+  response.writeHead(200, headers);
+  response.end(request.method === "HEAD" ? undefined : body);
 }
 
 function sendError(response, statusCode, message, headers = {}) {
@@ -523,6 +652,8 @@ export function createServer({ dataDir = process.env.DATA_DIR || path.join(publi
       handler = handleClick(request, response, clickStore);
     } else if (pathname === "/api/visitors") {
       handler = handleVisitors(request, response, visitorStore);
+    } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
+      handler = serveHome(request, response);
     } else {
       handler = serveStaticFile(request, response);
     }

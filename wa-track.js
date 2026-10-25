@@ -3,13 +3,18 @@
   const pages = ["index.html", "2.html", "3.html", "4.html", "5.html", "6.html"];
 
   function currentPage() {
+    const served = document.documentElement.dataset.variant;
+    if (pages.includes(served)) return served;
+
+    const name = location.pathname.split("/").pop() || "index.html";
+    if (name !== "index.html" && pages.includes(name)) return name;
+
     try {
       const selected = localStorage.getItem("kost-tiga-a-page-variant");
       if (pages.includes(selected)) return selected;
     } catch {
     }
-    const name = location.pathname.split("/").pop() || "index.html";
-    return pages.includes(name) ? name : "index.html";
+    return "index.html";
   }
 
   function slotOf(link) {

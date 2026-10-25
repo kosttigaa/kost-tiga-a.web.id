@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { createServer } from "../server.js";
+import { buildContentSecurityPolicy, createServer } from "../server.js";
 
 describe("static website server", () => {
   let dataDir;
@@ -65,20 +65,20 @@ describe("static website server", () => {
   });
 
   it("supports conditional requests with ETag", async () => {
-    const first = await fetch(`${baseUrl}/index.html`);
+    const first = await fetch(`${baseUrl}/2.html`);
     const etag = first.headers.get("etag");
     assert.ok(etag);
     assert.equal(first.headers.get("cache-control"), "no-cache");
     await first.arrayBuffer();
 
-    const second = await fetch(`${baseUrl}/index.html`, { headers: { "If-None-Match": etag } });
+    const second = await fetch(`${baseUrl}/2.html`, { headers: { "If-None-Match": etag } });
     assert.equal(second.status, 304);
     assert.equal(second.headers.get("etag"), etag);
   });
 
   it("compresses text files and caches media for a week", async () => {
     for (const encoding of ["br", "gzip"]) {
-      const response = await fetch(`${baseUrl}/index.html`, {
+      const response = await fetch(`${baseUrl}/2.html`, {
         headers: { "Accept-Encoding": encoding },
       });
       assert.equal(response.headers.get("content-encoding"), encoding);
@@ -86,7 +86,7 @@ describe("static website server", () => {
       assert.match(await response.text(), /Kost Tiga A/);
     }
 
-    const plain = await fetch(`${baseUrl}/index.html`, { headers: { "Accept-Encoding": "identity" } });
+    const plain = await fetch(`${baseUrl}/2.html`, { headers: { "Accept-Encoding": "identity" } });
     assert.equal(plain.headers.get("content-encoding"), null);
     await plain.arrayBuffer();
 
@@ -96,11 +96,11 @@ describe("static website server", () => {
     await video.arrayBuffer();
   });
 
-  it("sends security headers and a CSP that allows only the page's own inline script", async () => {
-    const response = await fetch(`${baseUrl}/index.html`, {
+  it("sends security headers and a CSP without inline scripts on the homepage", async () => {
+    const response = await fetch(`${baseUrl}/`, {
       headers: { "X-Forwarded-Proto": "https" },
     });
-    const html = await response.text();
+    await response.arrayBuffer();
     assert.equal(response.headers.get("x-frame-options"), "SAMEORIGIN");
     assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
     assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000");
@@ -108,15 +108,84 @@ describe("static website server", () => {
     const csp = response.headers.get("content-security-policy");
     assert.match(csp, /default-src 'self'/);
     assert.match(csp, /frame-ancestors 'self'/);
-    assert.doesNotMatch(csp, /script-src[^;]*unsafe-inline/);
+    assert.match(csp, /script-src 'self'(;|$)/);
 
-    const inlineScript = /<script>([\s\S]*?)<\/script>/.exec(html)[1];
-    const hash = createHash("sha256").update(inlineScript).digest("base64");
-    assert.ok(csp.includes(`'sha256-${hash}'`));
-
-    const plain = await fetch(`${baseUrl}/index.html`);
+    const plain = await fetch(`${baseUrl}/2.html`);
     assert.equal(plain.headers.get("strict-transport-security"), null);
     await plain.arrayBuffer();
+  });
+
+  it("hashes only real inline scripts in the CSP", () => {
+    const html = [
+      "<script>alert(1)</script>",
+      '<script type="application/ld+json">{"a":1}</script>',
+      '<script src="x.js" defer></script>',
+    ].join("\n");
+    const hash = createHash("sha256").update("alert(1)").digest("base64");
+    const csp = buildContentSecurityPolicy(html);
+    assert.ok(csp.includes(`script-src 'self' 'sha256-${hash}'`));
+    assert.equal(csp.match(/sha256-/g).length, 1);
+  });
+
+  it("serves the theme chosen for the visitor without client-side swapping", async () => {
+    const indexHtml = await readFile(new URL("../index.html", import.meta.url), "utf8");
+    const indexBody = indexHtml.slice(indexHtml.indexOf("<body"));
+
+    const fresh = await fetch(`${baseUrl}/`);
+    const setCookie = fresh.headers.get("set-cookie");
+    assert.match(setCookie, /^kost-variant=(index|[2-6])\.html; Max-Age=31536000; Path=\/; HttpOnly; SameSite=Lax$/);
+    assert.equal(fresh.headers.get("vary"), "Accept-Encoding, Cookie");
+    assert.equal(fresh.headers.get("cache-control"), "private, no-cache");
+    await fresh.arrayBuffer();
+
+    const secure = await fetch(`${baseUrl}/`, { headers: { "X-Forwarded-Proto": "https" } });
+    assert.match(secure.headers.get("set-cookie"), /; Secure$/);
+    await secure.arrayBuffer();
+
+    for (const variant of ["index.html", "2.html", "3.html", "4.html", "5.html", "6.html"]) {
+      const response = await fetch(`${baseUrl}/`, { headers: { Cookie: `kost-variant=${variant}` } });
+      const html = await response.text();
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("set-cookie"), null, variant);
+      assert.ok(html.includes(`<html lang="id" data-variant="${variant}">`), variant);
+      assert.ok(!html.includes("kost-tiga-a-page-variant"), variant);
+      assert.equal(html.slice(html.indexOf("<body")), indexBody, variant);
+      assert.ok(html.includes("application/ld+json"), variant);
+
+      const source = await readFile(new URL(`../${variant}`, import.meta.url), "utf8");
+      const style = /<style[^>]*>([\s\S]*?)<\/style>/.exec(source)[1];
+      assert.ok(html.includes(style), variant);
+      assert.ok(html.includes(/<meta name="theme-color" content="[^"]*">/.exec(source)[0]), variant);
+      for (const font of source.match(/<link\b[^>]*fonts\.googleapis\.com\/css2[^>]*>/g)) {
+        assert.ok(html.includes(font), variant);
+      }
+      assert.equal(html.match(/fonts\.googleapis\.com\/css2/g).length, source.match(/fonts\.googleapis\.com\/css2/g).length);
+    }
+
+    const invalid = await fetch(`${baseUrl}/`, { headers: { Cookie: "kost-variant=../server.js" } });
+    assert.match(invalid.headers.get("set-cookie"), /^kost-variant=(index|[2-6])\.html;/);
+    await invalid.arrayBuffer();
+  });
+
+  it("revalidates and compresses the themed homepage per visitor", async () => {
+    const cookie = { Cookie: "kost-variant=4.html" };
+    const first = await fetch(`${baseUrl}/index.html`, { headers: { ...cookie, "Accept-Encoding": "br" } });
+    assert.equal(first.headers.get("content-encoding"), "br");
+    const etag = first.headers.get("etag");
+    assert.match(await first.text(), /data-variant="4\.html"/);
+
+    const cached = await fetch(`${baseUrl}/`, { headers: { ...cookie, "If-None-Match": etag } });
+    assert.equal(cached.status, 304);
+
+    const other = await fetch(`${baseUrl}/`, { headers: { Cookie: "kost-variant=5.html", "If-None-Match": etag } });
+    assert.equal(other.status, 200);
+    await other.arrayBuffer();
+
+    const head = await fetch(`${baseUrl}/`, { method: "HEAD", headers: cookie });
+    assert.equal(head.status, 200);
+    assert.equal((await head.arrayBuffer()).byteLength, 0);
+
+    assert.equal((await fetch(`${baseUrl}/`, { method: "POST" })).status, 405);
   });
 
   it("keeps print pages working without CSP and covers error responses", async () => {
