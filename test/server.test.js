@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { buildContentSecurityPolicy, createServer, summarizeClicks } from "../server.js";
+import { buildContentSecurityPolicy, createServer, formatUpdatedTime, summarizeClicks } from "../server.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -154,7 +154,8 @@ describe("static website server", () => {
       assert.equal(response.headers.get("set-cookie"), null, variant);
       assert.ok(html.includes(`<html lang="id" data-variant="${variant}">`), variant);
       assert.ok(!html.includes("kost-tiga-a-page-variant"), variant);
-      assert.equal(html.slice(html.indexOf("<body")), indexBody, variant);
+      const stamp = /Terakhir diperbarui: <time datetime="[^"]*">[^<]*<\/time>/;
+      assert.equal(html.slice(html.indexOf("<body")).replace(stamp, "T"), indexBody.replace(stamp, "T"), variant);
       assert.ok(html.includes("application/ld+json"), variant);
 
       const source = await readFile(new URL(`../${variant}`, import.meta.url), "utf8");
@@ -388,6 +389,42 @@ describe("static website server", () => {
     } finally {
       await new Promise((resolve) => formServer.close(resolve));
       await rm(formDir, { recursive: true, force: true });
+    }
+  });
+
+  it("formats the update time in WIB", () => {
+    assert.deepEqual(formatUpdatedTime(new Date("2026-10-25T09:08:05Z")), {
+      iso: "2026-10-25T16:08:05+07:00",
+      label: "25 Oktober 2026, 16:08:05 WIB",
+    });
+    assert.equal(formatUpdatedTime(new Date("2026-12-31T17:30:00Z")).label, "1 Januari 2027, 00:30:00 WIB");
+  });
+
+  it("stamps the homepage with the newest of page and room data times", async () => {
+    const stampDir = await mkdtemp(path.join(tmpdir(), "kost-stamp-"));
+    const stampServer = createServer({ dataDir: stampDir });
+    await new Promise((resolve) => stampServer.listen(0, "127.0.0.1", resolve));
+    const url = `http://127.0.0.1:${stampServer.address().port}/`;
+    const cookie = { Cookie: "kost-variant=2.html" };
+    try {
+      const pageTime = Math.max(
+        (await stat(new URL("../index.html", import.meta.url))).mtimeMs,
+        (await stat(new URL("../2.html", import.meta.url))).mtimeMs,
+      );
+      const before = await (await fetch(url, { headers: cookie })).text();
+      assert.ok(before.includes(`datetime="${formatUpdatedTime(new Date(pageTime)).iso}"`));
+
+      const future = new Date(Math.max(Date.now(), pageTime) + 3_600_000);
+      await writeFile(path.join(stampDir, "rooms.json"), JSON.stringify({ alya: { ac: 1 } }));
+      await utimes(path.join(stampDir, "rooms.json"), future, future);
+      const response = await fetch(url, { headers: cookie });
+      const after = await response.text();
+      assert.ok(after.includes(`datetime="${formatUpdatedTime(future).iso}"`));
+      assert.ok(after.includes(formatUpdatedTime(future).label));
+      assert.equal(new Date(response.headers.get("last-modified")).getTime(), Math.floor(future.getTime() / 1000) * 1000);
+    } finally {
+      await new Promise((resolve) => stampServer.close(resolve));
+      await rm(stampDir, { recursive: true, force: true });
     }
   });
 

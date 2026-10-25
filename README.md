@@ -65,6 +65,10 @@ Nilai `ISI_RAHASIA` sama dengan `ADMIN_SECRET` di unit systemd (`Environment=ADM
 
 Alternatif dari CLI: form web yang nyaman dipakai dari HP. Dilindungi dengan cara yang sama seperti `/admin/stats` (header `X-Admin-Secret` dari nginx setelah basic auth), jadi tambahkan blok nginx yang sama untuk `location = /admin/kamar`. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. Karena browser mengirim basic auth otomatis, POST dari situs lain ditolak (header `Origin` harus sama dengan host).
 
+## Cap "Terakhir diperbarui"
+
+Di halaman `/`, tulisan "Terakhir diperbarui" diisi server dari waktu terbaru antara file `index.html`, file varian tema yang dipakai, dan `rooms.json` (ubah kamar kosong ikut memperbarui cap). Waktu ditampilkan dalam WIB. Halaman `2.html`–`6.html` yang dibuka langsung tetap memakai cap yang ditulis `deploy.ps1`.
+
 ## Tes
 
 ```sh

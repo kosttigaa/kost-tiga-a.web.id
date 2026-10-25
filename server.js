@@ -739,11 +739,60 @@ function applyVariant(indexHtml, variantHtml, variant) {
   return html.replace(/<html\b([^>]*)>/i, (match, attributes) => `<html${attributes} data-variant="${variant}">`);
 }
 
-async function renderHome(variant) {
+const indonesianMonths = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+export function formatUpdatedTime(date) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  const pad = (value) => String(value).padStart(2, "0");
+  return {
+    iso: `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${parts.hour}:${parts.minute}:${parts.second}+07:00`,
+    label: `${Number(parts.day)} ${indonesianMonths[parts.month - 1]} ${parts.year}, ${parts.hour}:${parts.minute}:${parts.second} WIB`,
+  };
+}
+
+function stampUpdated(html, date) {
+  const { iso, label } = formatUpdatedTime(date);
+  return html.replace(
+    /Terakhir diperbarui: <time datetime="[^"]*">[^<]*<\/time>/,
+    () => `Terakhir diperbarui: <time datetime="${iso}">${label}</time>`,
+  );
+}
+
+async function statOptional(file) {
+  try {
+    return await stat(file);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function renderHome(variant, dataDir) {
   const indexPath = path.join(publicRoot, "index.html");
   const variantPath = path.join(publicRoot, variant);
-  const [indexInfo, variantInfo] = await Promise.all([stat(indexPath), stat(variantPath)]);
-  const key = `${variant}|${indexInfo.mtimeMs}|${variantInfo.mtimeMs}`;
+  const [indexInfo, variantInfo, roomsInfo] = await Promise.all([
+    stat(indexPath),
+    stat(variantPath),
+    statOptional(path.join(dataDir, "rooms.json")),
+  ]);
+  const updatedMs = Math.max(indexInfo.mtimeMs, variantInfo.mtimeMs, roomsInfo?.mtimeMs ?? 0);
+  const key = `${variant}|${indexInfo.mtimeMs}|${variantInfo.mtimeMs}|${roomsInfo?.mtimeMs ?? 0}`;
 
   let entry = renderedHomeCache.get(key);
   if (!entry) {
@@ -751,13 +800,13 @@ async function renderHome(variant) {
       readFile(indexPath, "utf8"),
       variant === "index.html" ? null : readFile(variantPath, "utf8"),
     ]);
-    const html = applyVariant(indexHtml, variantHtml, variant);
+    const html = stampUpdated(applyVariant(indexHtml, variantHtml, variant), new Date(updatedMs));
     const body = Buffer.from(html);
     entry = {
       body,
       csp: buildContentSecurityPolicy(html),
       etag: `W/"${createHash("sha256").update(body).digest("hex").slice(0, 16)}"`,
-      lastModified: new Date(Math.max(indexInfo.mtimeMs, variantInfo.mtimeMs)).toUTCString(),
+      lastModified: new Date(updatedMs).toUTCString(),
     };
     if (renderedHomeCache.size >= maxRenderedHomeEntries) {
       renderedHomeCache.clear();
@@ -767,10 +816,10 @@ async function renderHome(variant) {
   return entry;
 }
 
-async function serveHome(request, response) {
+async function serveHome(request, response, dataDir) {
   const cookieVariant = readVariantCookie(request.headers.cookie);
   const variant = cookieVariant ?? variantPages[randomInt(variantPages.length)];
-  const entry = await renderHome(variant);
+  const entry = await renderHome(variant, dataDir);
 
   const headers = {
     "Cache-Control": "private, no-cache",
@@ -1002,7 +1051,7 @@ export function createServer({
     } else if (pathname === "/admin/kamar") {
       handler = handleAdminRooms(request, response, dataDir, adminSecret);
     } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
-      handler = serveHome(request, response);
+      handler = serveHome(request, response, dataDir);
     } else {
       handler = serveStaticFile(request, response);
     }
