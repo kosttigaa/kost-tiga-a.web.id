@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { createServer } from "../server.js";
 
@@ -83,6 +84,40 @@ describe("static website server", () => {
     assert.equal(video.headers.get("cache-control"), "public, max-age=604800");
     assert.equal(video.headers.get("content-encoding"), null);
     await video.arrayBuffer();
+  });
+
+  it("sends security headers and a CSP that allows only the page's own inline script", async () => {
+    const response = await fetch(`${baseUrl}/index.html`, {
+      headers: { "X-Forwarded-Proto": "https" },
+    });
+    const html = await response.text();
+    assert.equal(response.headers.get("x-frame-options"), "SAMEORIGIN");
+    assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
+    assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000");
+
+    const csp = response.headers.get("content-security-policy");
+    assert.match(csp, /default-src 'self'/);
+    assert.match(csp, /frame-ancestors 'self'/);
+    assert.doesNotMatch(csp, /script-src[^;]*unsafe-inline/);
+
+    const inlineScript = /<script>([\s\S]*?)<\/script>/.exec(html)[1];
+    const hash = createHash("sha256").update(inlineScript).digest("base64");
+    assert.ok(csp.includes(`'sha256-${hash}'`));
+
+    const plain = await fetch(`${baseUrl}/index.html`);
+    assert.equal(plain.headers.get("strict-transport-security"), null);
+    await plain.arrayBuffer();
+  });
+
+  it("keeps print pages working without CSP and covers error responses", async () => {
+    const poster = await fetch(`${baseUrl}/poster.html`);
+    assert.equal(poster.headers.get("content-security-policy"), null);
+    assert.equal(poster.headers.get("x-frame-options"), "SAMEORIGIN");
+    await poster.arrayBuffer();
+
+    const missing = await fetch(`${baseUrl}/missing.html`);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get("x-frame-options"), "SAMEORIGIN");
   });
 
   it("returns explicit errors for missing files and unsupported methods", async () => {

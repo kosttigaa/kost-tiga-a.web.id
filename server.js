@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
@@ -32,6 +33,52 @@ const longCacheTypes = new Set([".mp4", ".avif", ".gif", ".ico", ".jpeg", ".jpg"
 const compressedCache = new Map();
 const maxCompressedEntries = 100;
 const minCompressSize = 1024;
+
+const pagesWithoutCsp = new Set(["pamflet.html", "poster.html"]);
+const scriptHashCache = new Map();
+const cspDirectives = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data: https://images.unsplash.com",
+  "media-src 'self'",
+  "connect-src 'self' https://abacus.jasoncameron.dev",
+  "frame-src https://www.google.com https://www.youtube-nocookie.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+];
+
+function setSecurityHeaders(request, response) {
+  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.setHeader("X-Frame-Options", "SAMEORIGIN");
+  response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  if (request.headers["x-forwarded-proto"] === "https") {
+    response.setHeader("Strict-Transport-Security", "max-age=31536000");
+  }
+}
+
+async function getContentSecurityPolicy(filePath, etag) {
+  const key = `${filePath}|${etag}`;
+  let scriptSources = scriptHashCache.get(key);
+  if (!scriptSources) {
+    const html = await readFile(filePath, "utf8");
+    const hashes = [];
+    for (const match of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi)) {
+      if (!/type\s*=\s*["']?(?!module)[^"'\s>]*json/i.test(match[1]) && match[2].trim()) {
+        hashes.push(`'sha256-${createHash("sha256").update(match[2]).digest("base64")}'`);
+      }
+    }
+    scriptSources = ["'self'", ...hashes].join(" ");
+    if (scriptHashCache.size >= maxCompressedEntries) {
+      scriptHashCache.clear();
+    }
+    scriptHashCache.set(key, scriptSources);
+  }
+  return [...cspDirectives, `script-src ${scriptSources}`].join("; ");
+}
 
 function getCacheControl(extension) {
   if (longCacheTypes.has(extension)) {
@@ -208,6 +255,9 @@ async function serveStaticFile(request, response) {
   if (isCompressible) {
     headers.Vary = "Accept-Encoding";
   }
+  if (extension === ".html" && !pagesWithoutCsp.has(path.basename(filePath).toLowerCase())) {
+    headers["Content-Security-Policy"] = await getContentSecurityPolicy(filePath, etag);
+  }
 
   if (matchesEtag(request.headers["if-none-match"], etag)) {
     delete headers["Content-Type"];
@@ -271,6 +321,7 @@ async function serveStaticFile(request, response) {
 
 export function createServer() {
   return createHttpServer((request, response) => {
+    setSecurityHeaders(request, response);
     void serveStaticFile(request, response).catch((error) => {
       console.error("Failed to serve request:", error);
       if (!response.headersSent) {
