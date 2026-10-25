@@ -29,9 +29,14 @@ git add -- *.html
 git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 
-git push github main
+$server = 'deployer@147.139.130.126'
+$remoteDir = '/var/www/kost-tiga-a.web.id'
+
+git push origin main
 if ($LASTEXITCODE -ne 0) { throw "Push ke GitHub gagal." }
-git push production main
-if ($LASTEXITCODE -ne 0) { throw "Push ke production gagal." }
+
+# cmd digunakan agar data tar mengalir sebagai biner tanpa diubah PowerShell
+cmd /c "git archive --format=tar HEAD | ssh $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
+if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke VPS gagal." }
 
 Write-Output "Deploy selesai. Terakhir diperbarui: $label"
