@@ -26,7 +26,7 @@ const contentTypes = new Map([
   [".png", "image/png"],
   [".webp", "image/webp"],
 ]);
-const privateFiles = new Set(["server.js"]);
+const privateFiles = new Set(["server.js", "admin-logs.html"]);
 const privateDirectories = new Set(["test", "data", "scripts"]);
 const clickTargets = new Set(["athaya", "alya"]);
 const roomTypes = ["ac", "nonac"];
@@ -397,6 +397,22 @@ ul.chart li{display:grid;grid-template-columns:3.4rem 1fr 2.5rem;align-items:cen
 .bar{display:block;height:12px;min-width:2px;border-radius:3px;background:var(--blue)}
 .ok{margin:0 0 16px;padding:11px 14px;border:1px solid #b9e3c6;border-radius:6px;background:#e6f6ec;color:#146c2e;font-size:14px;font-weight:700}
 form{margin:0}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.table-wrap table{min-width:650px}
+.toolbar{display:flex;gap:12px;margin-bottom:12px}
+.toolbar input{min-height:42px;font-size:14px}
+.pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px}
+.pagination button{width:auto;min-height:38px}
+.pagination button:disabled{background:#d8d3e1;color:#6d667d;cursor:not-allowed}
+#page-info{min-width:110px;color:var(--muted);font-size:13px;text-align:center}
+.dashboard-section{padding:24px 0;scroll-margin-top:16px}
+.dashboard-section+.dashboard-section{border-top:1px solid var(--line)}
+.dashboard-section h1{margin:0;font-family:Manrope,sans-serif;font-size:clamp(24px,4vw,32px)}
+.dashboard-section>.intro{margin-bottom:18px}
+.status-code,.ip,.time{white-space:nowrap;font-variant-numeric:tabular-nums}
+.path{min-width:180px;overflow-wrap:anywhere;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.browser{min-width:140px}
+.empty{padding:28px 14px;color:var(--muted);text-align:center}
 .box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:14px}
 .box h2{grid-column:1/-1;margin:0}
 label{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700}
@@ -404,27 +420,24 @@ input{width:100%;min-height:46px;padding:0 13px;border:1px solid #d7cfe5;border-
 input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #9b87f0;outline-offset:2px}
 button{width:100%;min-height:46px;padding:0 16px;border:0;border-radius:6px;background:var(--ink);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 button:hover{background:var(--blue)}
-@media (max-width:600px){header{min-height:60px;padding-inline:16px}main{width:calc(100% - 28px);margin:32px auto}}
+@media (max-width:600px){header{min-height:60px;padding-inline:16px}main{width:calc(100% - 28px);margin:32px auto}.toolbar{flex-direction:column}.dashboard-section{padding:18px 0}}
 `;
 
-const adminContentSecurityPolicy = [
-  "default-src 'none'",
-  "style-src 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
-  "form-action 'self'",
-  "base-uri 'none'",
-  "frame-ancestors 'none'",
-].join("; ");
-
 const adminLinks = [
-  ["/admin/logs", "Log akses"],
-  ["/admin/stats", "Statistik"],
-  ["/admin/kamar", "Kamar kosong"],
+  ["/dashboard#logs", "Log akses"],
+  ["/dashboard#stats", "Statistik"],
+  ["/dashboard#rooms", "Kamar kosong"],
 ];
+const legacyAdminRoutes = new Map([
+  ["/admin/logs", "/dashboard#logs"],
+  ["/admin/logs/", "/dashboard#logs"],
+  ["/admin/stats", "/dashboard#stats"],
+  ["/admin/kamar", "/dashboard#rooms"],
+]);
 
-function renderAdminPage({ title, current, eyebrow, heading, intro, content }) {
+function renderAdminPage({ title, content }) {
   const links = adminLinks
-    .map(([href, label]) => `<a href="${href}"${href === current ? ' aria-current="page"' : ""}>${label}</a>`)
+    .map(([href, label]) => `<a href="${href}">${label}</a>`)
     .join("");
   return `<!doctype html>
 <html lang="id">
@@ -445,9 +458,6 @@ function renderAdminPage({ title, current, eyebrow, heading, intro, content }) {
 </header>
 <main>
 <nav class="admin-nav" aria-label="Menu admin">${links}</nav>
-<p class="eyebrow">${eyebrow}</p>
-<h1>${heading}</h1>
-<p class="intro">${intro}</p>
 ${content}
 </main>
 </body>
@@ -499,14 +509,10 @@ ${table("Per posisi tombol", clicks.slot)}
 <section class="panel"><h2>Ketersediaan kamar</h2><table><tr><th>Kost</th><th class="num">AC</th><th class="num">Non-AC</th></tr>${roomRows}</table><p class="muted">${roomsUpdated}</p></section>
 </div>`;
 
-  return renderAdminPage({
-    title: "Statistik",
-    current: "/admin/stats",
-    eyebrow: "Administrasi situs",
-    heading: "Statistik situs",
-    intro: `Dibuat ${escapeHtml(now.toISOString())}. Data klik dihitung per hari WIB.`,
-    content,
-  });
+  return `<section id="stats" class="dashboard-section" aria-labelledby="stats-title">
+<p class="eyebrow">Administrasi situs</p><h1 id="stats-title">Statistik situs</h1>
+<p class="intro">Dibuat ${escapeHtml(now.toISOString())}. Data klik dihitung per hari WIB.</p>${content}
+</section>`;
 }
 
 function matchesSecret(suppliedValue, expectedValue) {
@@ -547,6 +553,135 @@ function rejectAdmin(response, auth) {
   sendError(response, 503, "Admin authentication is not configured");
 }
 
+function renderLogsSection() {
+  return `<section id="logs" class="dashboard-section" aria-labelledby="logs-title">
+<p class="eyebrow">Administrasi situs</p><h1 id="logs-title">Log akses</h1>
+<p class="intro" id="status" aria-live="polite">Memuat log...</p>
+<div class="toolbar"><input id="search" type="search" aria-label="Cari log" placeholder="Cari IP, halaman, browser, metode, atau status"><button id="refresh" type="button">Muat ulang</button></div>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">IP</th><th scope="col">Waktu WIB</th><th scope="col">Halaman</th><th scope="col">Browser</th><th scope="col">Metode</th><th scope="col">Status</th></tr></thead>
+<tbody id="entries"><tr><td class="empty" colspan="6">Memuat log...</td></tr></tbody>
+</table></div>
+<nav class="pagination" aria-label="Navigasi halaman log"><button id="previous-page" type="button">Sebelumnya</button><span id="page-info" aria-live="polite">Halaman 1 dari 1</span><button id="next-page" type="button">Berikutnya</button></nav>
+</section>`;
+}
+
+const dashboardScript = `const pageSize=50,statusElement=document.getElementById("status"),entriesElement=document.getElementById("entries"),searchElement=document.getElementById("search"),previousPageButton=document.getElementById("previous-page"),nextPageButton=document.getElementById("next-page"),pageInfoElement=document.getElementById("page-info");let entries=[],currentPage=1;
+function getBrowser(userAgent){const browsers=[["Edge",/Edg(?:e|A|iOS)?\\/([\\d.]+)/],["Opera",/(?:OPR|Opera)\\/([\\d.]+)/],["Samsung Internet",/SamsungBrowser\\/([\\d.]+)/],["Firefox",/(?:Firefox|FxiOS)\\/([\\d.]+)/],["Chrome",/(?:Chrome|CriOS)\\/([\\d.]+)/],["Safari",/Version\\/([\\d.]+).*Safari/]];for(const [name,pattern] of browsers){const match=userAgent.match(pattern);if(match)return name+" "+match[1]}return "Tidak diketahui"}
+function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className] of [[entry.ip,"ip"],[time,"time"],[entry.path,"path"],[getBrowser(entry.userAgent),"browser"],[entry.method,""],[String(entry.status),"status-code"]]){const cell=document.createElement("td");cell.className=className;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
+async function loadLog(){statusElement.textContent="Memuat log...";try{const response=await fetch("/dashboard?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
+document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});loadLog();`;
+
+function dashboardCsp() {
+  const hash = createHash("sha256").update(dashboardScript).digest("base64");
+  return [
+    "default-src 'none'",
+    "script-src 'sha256-" + hash + "'",
+    "style-src 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "connect-src 'self'",
+    "form-action 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
+async function handleAdminDashboard(request, response, dataDir, accessLogs, auth) {
+  if (!isAdmin(request, auth)) {
+    rejectAdmin(response, auth);
+    return;
+  }
+
+  const url = new URL(request.url, "http://localhost");
+  const pathname = url.pathname;
+  if (pathname === "/dashboard" && url.searchParams.get("data") === "logs") {
+    if (request.method !== "GET") {
+      sendError(response, 405, "Method Not Allowed", { Allow: "GET" });
+      return;
+    }
+    const body = JSON.stringify(await accessLogs.read());
+    response.writeHead(200, {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Length": Buffer.byteLength(body),
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow",
+    });
+    response.end(body);
+    return;
+  }
+  if (pathname !== "/dashboard" && pathname !== "/dashboard/") {
+    sendError(response, 404, "Not Found");
+    return;
+  }
+
+  if (request.method === "POST") {
+    let originHost = null;
+    try {
+      originHost = new URL(request.headers.origin ?? "").host;
+    } catch {}
+    if (originHost !== request.headers.host && request.headers["sec-fetch-site"] !== "same-origin") {
+      sendError(response, 403, "Forbidden");
+      return;
+    }
+    let form;
+    try {
+      form = new URLSearchParams(await readSmallBody(request));
+    } catch (error) {
+      sendError(response, error.statusCode === 413 ? 413 : 400, error.statusCode === 413 ? "Payload Too Large" : "Bad Request");
+      return;
+    }
+    const counts = {};
+    for (const target of clickTargets) {
+      for (const type of roomTypes) {
+        const raw = (form.get(`${target}-${type}`) ?? "").trim();
+        if (raw === "") continue;
+        const count = Number(raw);
+        if (!/^\d{1,2}$/.test(raw) || !Number.isInteger(count)) {
+          sendError(response, 400, "Bad Request");
+          return;
+        }
+        counts[target] = { ...counts[target], [type]: count };
+      }
+    }
+    await saveRooms(dataDir, counts);
+    response.writeHead(303, { Location: "/dashboard?saved=1#rooms", "Cache-Control": "no-store" });
+    response.end();
+    return;
+  }
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD, POST" });
+    return;
+  }
+  const now = new Date();
+  const [clickText, visitorText, rooms] = await Promise.all([
+    readOptional(path.join(dataDir, "clicks.jsonl")),
+    readOptional(path.join(dataDir, "visitors.json")),
+    readRooms(dataDir),
+  ]);
+  let visitors = 0;
+  try {
+    const saved = JSON.parse(visitorText || "{}");
+    visitors = Number.isSafeInteger(saved.count) && saved.count >= 0 ? saved.count : 0;
+  } catch {}
+  const notice = url.searchParams.get("saved") === "1" ? "Tersimpan. Perubahan sudah tampil di situs." : "";
+  const content = `<p class="eyebrow">Administrasi situs</p><h1>Dashboard</h1><p class="intro">Log akses, statistik, dan ketersediaan kamar dalam satu halaman.</p>
+${renderLogsSection()}
+${renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now })}
+<section id="rooms" class="dashboard-section" aria-labelledby="rooms-title"><p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1><p class="intro">Atur jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe. ${rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur."}</p>${renderRoomsForm(rooms, notice)}</section>
+<script>${dashboardScript}</script>`;
+  const body = renderAdminPage({ title: "Dashboard", content });
+  response.writeHead(200, {
+    "Cache-Control": "no-store",
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
+    "Content-Security-Policy": dashboardCsp(),
+    "X-Robots-Tag": "noindex, nofollow",
+  });
+  response.end(request.method === "HEAD" ? undefined : body);
+}
+
 let roomsWriteQueue = Promise.resolve();
 
 async function saveRooms(dataDir, counts) {
@@ -585,150 +720,20 @@ function renderRoomsForm(rooms, message) {
       return `<div class="panel box" role="group" aria-labelledby="g-${target}"><h2 id="g-${target}">${escapeHtml(name)}</h2>${inputs}</div>`;
     })
     .join("");
-  const updated = rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur.";
-
-  const content = `${message ? `<p class="ok" role="status">${escapeHtml(message)}</p>` : ""}
-<form method="post" action="/admin/kamar">
+  return `${message ? `<p class="ok" role="status">${escapeHtml(message)}</p>` : ""}
+<form method="post" action="/dashboard#rooms">
 ${fieldsets}
 <button type="submit">Simpan</button>
 </form>`;
-
-  return renderAdminPage({
-    title: "Kamar kosong",
-    current: "/admin/kamar",
-    eyebrow: "Administrasi situs",
-    heading: "Kamar kosong",
-    intro: `Isi jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe itu. ${updated}`,
-    content,
-  });
 }
 
-async function handleAdminRooms(request, response, dataDir, auth) {
-  if (!isAdmin(request, auth)) {
-    rejectAdmin(response, auth);
-    return;
-  }
-
-  if (request.method === "POST") {
-    // Basic auth dikirim otomatis oleh browser, jadi tolak POST lintas situs.
-    let originHost = null;
-    try {
-      originHost = new URL(request.headers.origin ?? "").host;
-    } catch {
-    }
-    const sameSite = originHost === request.headers.host || request.headers["sec-fetch-site"] === "same-origin";
-    if (!sameSite) {
-      sendError(response, 403, "Forbidden");
-      return;
-    }
-
-    let form;
-    try {
-      form = new URLSearchParams(await readSmallBody(request));
-    } catch (error) {
-      sendError(response, error.statusCode === 413 ? 413 : 400, error.statusCode === 413 ? "Payload Too Large" : "Bad Request");
-      return;
-    }
-
-    const counts = {};
-    for (const target of clickTargets) {
-      for (const type of roomTypes) {
-        const raw = (form.get(`${target}-${type}`) ?? "").trim();
-        if (raw === "") continue;
-        const count = Number(raw);
-        if (!/^\d{1,2}$/.test(raw) || !Number.isInteger(count)) {
-          sendError(response, 400, "Bad Request");
-          return;
-        }
-        counts[target] = { ...counts[target], [type]: count };
-      }
-    }
-
-    await saveRooms(dataDir, counts);
-    response.writeHead(303, { Location: "/admin/kamar?saved=1", "Cache-Control": "no-store" });
-    response.end();
-    return;
-  }
-
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD, POST" });
-    return;
-  }
-
-  const saved = new URL(request.url, "http://localhost").searchParams.get("saved") === "1";
-  const body = renderRoomsForm(await readRooms(dataDir), saved ? "Tersimpan. Perubahan sudah tampil di situs." : "");
-  response.writeHead(200, {
-    "Cache-Control": "no-store",
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
-    "Content-Security-Policy": adminContentSecurityPolicy,
-    "X-Robots-Tag": "noindex, nofollow",
-  });
-  response.end(request.method === "HEAD" ? undefined : body);
-}
-
-async function handleAdminStats(request, response, dataDir, auth) {
-  if (!isAdmin(request, auth)) {
-    rejectAdmin(response, auth);
-    return;
-  }
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
-    return;
-  }
-
-  const now = new Date();
-  const [clickText, visitorText, rooms] = await Promise.all([
-    readOptional(path.join(dataDir, "clicks.jsonl")),
-    readOptional(path.join(dataDir, "visitors.json")),
-    readRooms(dataDir),
-  ]);
-  let visitors = 0;
-  try {
-    const saved = JSON.parse(visitorText || "{}");
-    visitors = Number.isSafeInteger(saved.count) && saved.count >= 0 ? saved.count : 0;
-  } catch {
-  }
-
-  const body = renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now });
-  response.writeHead(200, {
-    "Cache-Control": "no-store",
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
-    "Content-Security-Policy": adminContentSecurityPolicy,
-    "X-Robots-Tag": "noindex, nofollow",
-  });
-  response.end(request.method === "HEAD" ? undefined : body);
-}
-
-async function handleAdminLogs(request, response, accessLogs, auth) {
-  if (!isAdmin(request, auth)) {
-    rejectAdmin(response, auth);
-    return;
-  }
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
-    return;
-  }
-
-  const pathname = new URL(request.url, "http://localhost").pathname;
-  if (pathname === "/admin/logs/data") {
-    const body = JSON.stringify(await accessLogs.read());
-    response.writeHead(200, {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/json; charset=utf-8",
-      "Content-Length": Buffer.byteLength(body),
-      "X-Content-Type-Options": "nosniff",
-      "X-Robots-Tag": "noindex, nofollow",
-    });
-    response.end(request.method === "HEAD" ? undefined : body);
-    return;
-  }
-  if (pathname !== "/admin/logs" && pathname !== "/admin/logs/") {
-    sendError(response, 404, "Not Found");
-    return;
-  }
-  await serveStaticFile(request, response, "admin-logs.html");
+function renderRoomsSection(rooms, message) {
+  const updated = rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur.";
+  return `<section id="rooms" class="dashboard-section" aria-labelledby="rooms-title">
+<p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1>
+<p class="intro">Isi jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe itu. ${updated}</p>
+${renderRoomsForm(rooms, message)}
+</section>`;
 }
 
 const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
@@ -1245,12 +1250,19 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
-    } else if (pathname === "/admin/logs" || pathname === "/admin/logs/" || pathname === "/admin/logs/data") {
-      handler = handleAdminLogs(request, response, accessLogs, adminAuth);
-    } else if (pathname === "/admin/stats") {
-      handler = handleAdminStats(request, response, dataDir, adminAuth);
-    } else if (pathname === "/admin/kamar") {
-      handler = handleAdminRooms(request, response, dataDir, adminAuth);
+    } else if (pathname === "/dashboard" || pathname === "/dashboard/") {
+      handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth);
+    } else if (legacyAdminRoutes.has(pathname)) {
+      if (!isAdmin(request, adminAuth)) {
+        rejectAdmin(response, adminAuth);
+        return;
+      }
+      response.writeHead(308, { Location: legacyAdminRoutes.get(pathname), "Cache-Control": "no-store" });
+      response.end();
+      return;
+    } else if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+      sendError(response, 404, "Not Found");
+      return;
     } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
       handler = serveHome(request, response, dataDir);
     } else {

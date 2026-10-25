@@ -47,9 +47,11 @@ DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js   # lihat status
 
 Angka 0 menampilkan "penuh". Perubahan langsung tampil tanpa restart.
 
-## Dasbor statistik
+## Dashboard admin
 
-`/admin/logs`, `/admin/stats`, dan `/admin/kamar` dilayani Node.js dan memakai HTTP Basic Auth dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD` yang sama. Atur kedua environment variable tersebut sebelum menjalankan server. Jangan simpan password ke Git.
+Log akses, statistik, dan kamar kosong sekarang tersedia pada satu halaman `/dashboard`. Menu di halaman hanya berpindah ke bagian `#logs`, `#stats`, dan `#rooms`; halaman memakai query `?data=logs` untuk memuat data log tanpa membuat route admin terpisah. URL lama `/admin/logs`, `/admin/stats`, dan `/admin/kamar` mengarahkan ke bagian yang sesuai di dashboard.
+
+Dashboard memakai HTTP Basic Auth dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD`. Atur kedua environment variable tersebut sebelum menjalankan server. Jangan simpan password ke Git.
 
 Di PowerShell lokal:
 
@@ -59,7 +61,7 @@ $env:ADMIN_PASSWORD = "pilih-password-lokal-yang-kuat"
 npm start
 ```
 
-Di VPS, atur `ADMIN_USER` dan `ADMIN_PASSWORD` di drop-in systemd service Node. Gunakan kredensial yang sama dengan user/password pada file htpasswd Nginx. Nginx tetap melakukan Basic Auth, lalu meneruskan header `Authorization` ke Node untuk pemeriksaan kedua:
+Di VPS, atur `ADMIN_USER` dan `ADMIN_PASSWORD` di drop-in systemd service Node. Akses dashboard harus lewat HTTPS; Node memeriksa login Basic Auth. Nginx meneruskan header autentikasi ke Node:
 
 ```ini
 [Service]
@@ -70,30 +72,29 @@ Environment=ADMIN_PASSWORD=password-yang-sama-dengan-htpasswd
 Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; jangan menaruhnya di repository atau mengirimkannya lewat chat. Simpan konfigurasi, lalu jalankan `sudo systemctl daemon-reload`.
 
 ```nginx
-location ^~ /admin/ {
-    auth_basic "Kost Tiga A";
-    auth_basic_user_file /etc/nginx/kost-tiga-a-logs.htpasswd;
+location = /dashboard {
     proxy_set_header Authorization $http_authorization;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_pass http://127.0.0.1:3000;
 }
+
 ```
 
-Sebelum memakai blok tersebut, hapus/ganti semua location Nginx lama yang khusus menangani `/admin/logs`, `/admin/stats`, atau `/admin/kamar`; location exact yang lama akan tetap mengalahkan blok di atas. Setelah perubahan Nginx, uji dengan `sudo nginx -t` lalu reload Nginx. Pastikan password yang dipakai Basic Auth cocok dengan `ADMIN_USER`/`ADMIN_PASSWORD` di systemd.
+`admin-logs.html` lama hanya mengarahkan ke `/dashboard#logs` jika masih disajikan langsung oleh konfigurasi Nginx lama. Hapus konfigurasi Nginx lama yang secara langsung menyajikan halaman log atau menambahkan `X-Admin-Secret`; location lama dapat mengambil alih permintaan sebelum Node menerimanya. Setelah perubahan, uji dengan `sudo nginx -t` lalu reload Nginx.
 
-Urutan migrasi VPS: set pasangan environment baru, deploy file aplikasi, restart service Node, lalu ganti location Nginx dan reload. Untuk sementara, server masih menerima header rahasia lama pada statistik/form kamar dan halaman log masih bisa membaca format log Nginx lama, sehingga perpindahan bisa dilakukan bertahap. Setelah blok Nginx baru aktif, hapus konfigurasi `X-Admin-Secret` lama dan `ADMIN_SECRET` dari systemd, lalu restart service.
+Migrasi VPS harus dilakukan setelah deploy branch fitur: set kredensial systemd, tambahkan location `/dashboard` di Nginx, lalu hapus konfigurasi lama untuk `/admin/*`, uji dan reload Nginx, kemudian restart Node. Jangan deploy sebelum siap melakukan perubahan konfigurasi Nginx karena route admin lama akan diganti menjadi 404. Setelah migrasi, hapus `ADMIN_SECRET` lama dari systemd.
 
-`deploy.ps1` mengirim branch yang sedang aktif ke VPS dan GitHub. Jadi branch fitur dapat diuji tanpa mengubah `main`; untuk deploy dari branch fitur, jalankan `.\deploy.ps1 -Message "Uji dashboard lokal dan VPS"` setelah semua perubahan di-commit. Kode Node.js yang berubah memerlukan `sudo systemctl restart kost-tiga-a` di VPS. Konfigurasi Nginx dan kredensial systemd tetap harus diterapkan manual sesuai langkah di atas. Untuk kembali, pindah ke `main` lalu deploy lagi; data di `DATA_DIR` tetap terpisah dari kode.
+`deploy.ps1` mengirim branch yang sedang aktif ke VPS dan GitHub. Jadi branch fitur dapat diuji tanpa mengubah `main`; untuk deploy dari branch fitur, jalankan `.\deploy.ps1 -Message "Dashboard satu halaman"` setelah semua perubahan di-commit. Konfigurasi Nginx dan kredensial systemd tetap harus diterapkan manual. Untuk kembali, pindah ke `main` lalu deploy lagi dan pulihkan konfigurasi Nginx sebelumnya; data di `DATA_DIR` tetap terpisah dari kode.
 
-`/admin/logs` menampilkan hingga 1.000 request terakhir yang mencapai Node.js. Data disimpan di `access.jsonl` di dalam `DATA_DIR` (hingga 10.000 baris); query string tidak dicatat. Di VPS, Nginx masih dapat menyajikan file aset statis secara langsung, jadi akses aset yang tidak diteruskan ke Node tidak muncul di dashboard log.
+Bagian Log akses menampilkan hingga 1.000 request terakhir yang mencapai Node.js. Data disimpan di `access.jsonl` di dalam `DATA_DIR` (hingga 10.000 baris); query string tidak dicatat. Di VPS, Nginx masih dapat menyajikan file aset statis secara langsung, jadi akses aset yang tidak diteruskan ke Node tidak muncul di log.
 
-`/admin/stats` menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar.
+Bagian Statistik menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar.
 
-## Form kamar kosong (`/admin/kamar`)
+## Form kamar kosong
 
-Alternatif dari CLI: form web yang nyaman dipakai dari HP dan dilindungi Basic Auth yang sama. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. Karena browser mengirim Basic Auth otomatis, POST dari situs lain ditolak (header `Origin` harus sama dengan host).
+Form web pada bagian Kamar kosong nyaman dipakai dari HP dan dilindungi Basic Auth yang sama. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. POST dari situs lain ditolak (header `Origin` harus sama dengan host).
 
 ## Cap "Terakhir diperbarui"
 
