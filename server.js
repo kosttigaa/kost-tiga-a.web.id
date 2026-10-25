@@ -406,6 +406,7 @@ form{margin:0}
 .pagination button:disabled{background:#d8d3e1;color:#6d667d;cursor:not-allowed}
 #page-info{min-width:110px;color:var(--muted);font-size:13px;text-align:center}
 .dashboard-section{padding:24px 0;scroll-margin-top:16px}
+.dashboard-section[hidden]{display:none}
 .dashboard-section+.dashboard-section{border-top:1px solid var(--line)}
 .dashboard-section h1{margin:0;font-family:Manrope,sans-serif;font-size:clamp(24px,4vw,32px)}
 .dashboard-section>.intro{margin-bottom:18px}
@@ -437,7 +438,7 @@ const legacyAdminRoutes = new Map([
 
 function renderAdminPage({ title, content }) {
   const links = adminLinks
-    .map(([href, label]) => `<a href="${href}">${label}</a>`)
+    .map(([href, label], index) => `<a href="${href}"${index === 0 ? ' aria-current="page"' : ""}>${label}</a>`)
     .join("");
   return `<!doctype html>
 <html lang="id">
@@ -509,7 +510,7 @@ ${table("Per posisi tombol", clicks.slot)}
 <section class="panel"><h2>Ketersediaan kamar</h2><table><tr><th>Kost</th><th class="num">AC</th><th class="num">Non-AC</th></tr>${roomRows}</table><p class="muted">${roomsUpdated}</p></section>
 </div>`;
 
-  return `<section id="stats" class="dashboard-section" aria-labelledby="stats-title">
+  return `<section id="stats" class="dashboard-section" aria-labelledby="stats-title" hidden>
 <p class="eyebrow">Administrasi situs</p><h1 id="stats-title">Statistik situs</h1>
 <p class="intro">Dibuat ${escapeHtml(now.toISOString())}. Data klik dihitung per hari WIB.</p>${content}
 </section>`;
@@ -570,6 +571,7 @@ const dashboardScript = `const pageSize=50,statusElement=document.getElementById
 function getBrowser(userAgent){const browsers=[["Edge",/Edg(?:e|A|iOS)?\\/([\\d.]+)/],["Opera",/(?:OPR|Opera)\\/([\\d.]+)/],["Samsung Internet",/SamsungBrowser\\/([\\d.]+)/],["Firefox",/(?:Firefox|FxiOS)\\/([\\d.]+)/],["Chrome",/(?:Chrome|CriOS)\\/([\\d.]+)/],["Safari",/Version\\/([\\d.]+).*Safari/]];for(const [name,pattern] of browsers){const match=userAgent.match(pattern);if(match)return name+" "+match[1]}return "Tidak diketahui"}
 function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className] of [[entry.ip,"ip"],[time,"time"],[entry.path,"path"],[getBrowser(entry.userAgent),"browser"],[entry.method,""],[String(entry.status),"status-code"]]){const cell=document.createElement("td");cell.className=className;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
 async function loadLog(){statusElement.textContent="Memuat log...";try{const response=await fetch("/dashboard?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
+const sections=[...document.querySelectorAll(".dashboard-section")],tabs=[...document.querySelectorAll(".admin-nav a")];function activateSection(id){const active=sections.some(section=>section.id===id)?id:"logs";for(const section of sections)section.hidden=section.id!==active;for(const tab of tabs){if(tab.hash==="#"+active)tab.setAttribute("aria-current","page");else tab.removeAttribute("aria-current")}}for(const tab of tabs)tab.addEventListener("click",event=>{event.preventDefault();const id=tab.hash.slice(1);if(location.hash!=="#"+id)history.pushState(null,"","#"+id);activateSection(id)});addEventListener("hashchange",()=>activateSection(location.hash.slice(1)));activateSection(location.hash.slice(1)||"logs");
 document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});loadLog();`;
 
 function dashboardCsp() {
@@ -669,7 +671,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
   const content = `<p class="eyebrow">Administrasi situs</p><h1>Dashboard</h1><p class="intro">Log akses, statistik, dan ketersediaan kamar dalam satu halaman.</p>
 ${renderLogsSection()}
 ${renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now })}
-<section id="rooms" class="dashboard-section" aria-labelledby="rooms-title"><p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1><p class="intro">Atur jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe. ${rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur."}</p>${renderRoomsForm(rooms, notice)}</section>
+<section id="rooms" class="dashboard-section" aria-labelledby="rooms-title" hidden><p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1><p class="intro">Atur jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe. ${rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur."}</p>${renderRoomsForm(rooms, notice)}</section>
 <script>${dashboardScript}</script>`;
   const body = renderAdminPage({ title: "Dashboard", content });
   response.writeHead(200, {
