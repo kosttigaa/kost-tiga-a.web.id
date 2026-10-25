@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,6 +33,101 @@ const clickPages = new Set(["index.html", "2.html", "3.html", "4.html", "5.html"
 const clickSlotPattern = /^[a-z0-9-]{1,30}$/;
 const maxClickBodyBytes = 1024;
 const maxClicksPerMinute = 120;
+
+const maxHitsPerMinute = 60;
+
+function createVisitorStore(dataDir) {
+  const file = path.join(dataDir, "visitors.json");
+  let count = null;
+  let queue = Promise.resolve();
+  let windowStart = 0;
+  let windowCount = 0;
+
+  async function load() {
+    if (count !== null) {
+      return;
+    }
+    try {
+      const saved = JSON.parse(await readFile(file, "utf8"));
+      count = Number.isSafeInteger(saved.count) && saved.count >= 0 ? saved.count : 0;
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
+      count = 0;
+    }
+  }
+
+  // Semua operasi diserialkan agar hitungan tidak berebut saat ada hit bersamaan
+  function enqueue(task) {
+    const result = queue.then(task);
+    queue = result.catch(() => {});
+    return result;
+  }
+
+  return {
+    allowHit() {
+      const now = Date.now();
+      if (now - windowStart >= 60_000) {
+        windowStart = now;
+        windowCount = 0;
+      }
+      windowCount += 1;
+      return windowCount <= maxHitsPerMinute;
+    },
+    read: () =>
+      enqueue(async () => {
+        await load();
+        return count;
+      }),
+    hit: () =>
+      enqueue(async () => {
+        await load();
+        await mkdir(dataDir, { recursive: true });
+        const next = count + 1;
+        const temp = `${file}.tmp`;
+        await writeFile(temp, JSON.stringify({ count: next }));
+        await rename(temp, file);
+        count = next;
+        return count;
+      }),
+  };
+}
+
+async function handleVisitors(request, response, store) {
+  if (request.method !== "GET" && request.method !== "POST") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, POST" });
+    return;
+  }
+
+  if (request.method === "POST") {
+    const origin = request.headers.origin;
+    if (origin) {
+      let originHost;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        originHost = null;
+      }
+      if (originHost !== request.headers.host) {
+        sendError(response, 403, "Forbidden");
+        return;
+      }
+    }
+    if (!store.allowHit()) {
+      sendError(response, 429, "Too Many Requests", { "Retry-After": "60" });
+      return;
+    }
+  }
+
+  const value = request.method === "POST" ? await store.hit() : await store.read();
+  response.writeHead(200, {
+    "Cache-Control": "no-store",
+    "Content-Type": "application/json; charset=utf-8",
+    "X-Content-Type-Options": "nosniff",
+  });
+  response.end(JSON.stringify({ value }));
+}
 
 function createClickStore(dataDir) {
   const file = path.join(dataDir, "clicks.jsonl");
@@ -139,7 +234,7 @@ const cspDirectives = [
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: https://images.unsplash.com",
   "media-src 'self'",
-  "connect-src 'self' https://abacus.jasoncameron.dev",
+  "connect-src 'self'",
   "frame-src https://www.google.com https://www.youtube-nocookie.com",
   "object-src 'none'",
   "base-uri 'self'",
@@ -418,13 +513,19 @@ async function serveStaticFile(request, response) {
 
 export function createServer({ dataDir = process.env.DATA_DIR || path.join(publicRoot, "data") } = {}) {
   const clickStore = createClickStore(dataDir);
+  const visitorStore = createVisitorStore(dataDir);
 
   return createHttpServer((request, response) => {
     setSecurityHeaders(request, response);
-    const handler =
-      new URL(request.url, "http://localhost").pathname === "/api/click"
-        ? handleClick(request, response, clickStore)
-        : serveStaticFile(request, response);
+    const { pathname } = new URL(request.url, "http://localhost");
+    let handler;
+    if (pathname === "/api/click") {
+      handler = handleClick(request, response, clickStore);
+    } else if (pathname === "/api/visitors") {
+      handler = handleVisitors(request, response, visitorStore);
+    } else {
+      handler = serveStaticFile(request, response);
+    }
     void handler.catch((error) => {
       console.error("Failed to serve request:", error);
       if (!response.headersSent) {

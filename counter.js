@@ -1,7 +1,5 @@
 (() => {
-  const base = "https://abacus.jasoncameron.dev";
-  const namespace = "kost-tiga-a.web.id";
-  const key = "unique-visitors";
+  const endpoint = "/api/visitors";
   const storageKey = "kost-tiga-a-counted";
 
   const brandName = document.querySelector(".site-header .brand-name");
@@ -15,9 +13,9 @@
   } catch {
   }
 
-  const action = alreadyCounted ? "get" : "hit";
+  const method = alreadyCounted ? "GET" : "POST";
 
-  fetch(`${base}/${action}/${namespace}/${key}`)
+  fetch(endpoint, { method, cache: "no-store" })
     .then((response) => (response.ok ? response.json() : Promise.reject()))
     .then((data) => {
       if (!alreadyCounted) {

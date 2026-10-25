@@ -194,6 +194,40 @@ describe("static website server", () => {
     await tracker.arrayBuffer();
   });
 
+  it("counts unique visitors, persists the count, and rejects bad requests", async () => {
+    const initial = await (await fetch(`${baseUrl}/api/visitors`)).json();
+    assert.equal(initial.value, 0);
+
+    const hits = await Promise.all(
+      Array.from({ length: 10 }, () => fetch(`${baseUrl}/api/visitors`, { method: "POST" }).then((r) => r.json())),
+    );
+    assert.deepEqual(hits.map((h) => h.value).sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+    const read = await fetch(`${baseUrl}/api/visitors`);
+    assert.equal(read.headers.get("cache-control"), "no-store");
+    assert.equal((await read.json()).value, 10);
+
+    const foreign = await fetch(`${baseUrl}/api/visitors`, { method: "POST", headers: { Origin: "https://evil.example" } });
+    assert.equal(foreign.status, 403);
+    assert.equal((await fetch(`${baseUrl}/api/visitors`, { method: "DELETE" })).status, 405);
+
+    const restarted = createServer({ dataDir });
+    await new Promise((resolve) => restarted.listen(0, "127.0.0.1", resolve));
+    try {
+      const url = `http://127.0.0.1:${restarted.address().port}/api/visitors`;
+      assert.equal((await (await fetch(url)).json()).value, 10);
+      assert.equal((await (await fetch(url, { method: "POST" })).json()).value, 11);
+    } finally {
+      await new Promise((resolve) => restarted.close(resolve));
+    }
+
+    let limited = 0;
+    for (let i = 0; i < 70; i += 1) {
+      if ((await fetch(`${baseUrl}/api/visitors`, { method: "POST" })).status === 429) limited += 1;
+    }
+    assert.ok(limited > 0);
+  });
+
   it("returns explicit errors for missing files and unsupported methods", async () => {
     const missingResponse = await fetch(`${baseUrl}/missing.html`);
     assert.equal(missingResponse.status, 404);
