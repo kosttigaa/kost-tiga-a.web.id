@@ -29,6 +29,7 @@ const contentTypes = new Map([
 const privateFiles = new Set(["server.js"]);
 const privateDirectories = new Set(["test", "data", "scripts"]);
 const clickTargets = new Set(["athaya", "alya"]);
+const roomTypes = ["ac", "nonac"];
 const clickPages = new Set(["index.html", "2.html", "3.html", "4.html", "5.html", "6.html"]);
 const clickSlotPattern = /^[a-z0-9-]{1,30}$/;
 const maxClickBodyBytes = 1024;
@@ -231,8 +232,11 @@ async function handleRooms(request, response, dataDir) {
     const saved = JSON.parse(await readFile(path.join(dataDir, "rooms.json"), "utf8"));
     for (const target of clickTargets) {
       const entry = saved?.[target];
-      if (Number.isSafeInteger(entry?.available) && entry.available >= 0 && entry.available <= 99) {
-        rooms[target] = { available: entry.available };
+      for (const type of roomTypes) {
+        const count = entry?.[type];
+        if (Number.isSafeInteger(count) && count >= 0 && count <= 99) {
+          rooms[target] = { ...rooms[target], [type]: count };
+        }
       }
     }
     if (typeof saved?.updatedAt === "string" && !Number.isNaN(Date.parse(saved.updatedAt))) {

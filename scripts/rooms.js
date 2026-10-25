@@ -6,6 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = process.env.DATA_DIR || path.join(root, "data");
 const file = path.join(dataDir, "rooms.json");
 const targets = ["athaya", "alya"];
+const types = { ac: "AC", nonac: "Non-AC" };
 
 let rooms = {};
 try {
@@ -16,12 +17,15 @@ try {
   }
 }
 
-const [target, value] = process.argv.slice(2);
+const [target, type, value] = process.argv.slice(2);
 
 if (target === undefined) {
   for (const name of targets) {
-    const available = rooms[name]?.available;
-    console.log(`${name}: ${available === undefined ? "belum diatur" : `${available} kamar kosong`}`);
+    const parts = Object.entries(types).map(([key, label]) => {
+      const count = rooms[name]?.[key];
+      return `${label}: ${Number.isInteger(count) ? count : "belum diatur"}`;
+    });
+    console.log(`${name} -> ${parts.join(" | ")}`);
   }
   if (rooms.updatedAt) {
     console.log(`Diperbarui: ${rooms.updatedAt}`);
@@ -29,18 +33,25 @@ if (target === undefined) {
   process.exit(0);
 }
 
-const available = Number(value);
-if (!targets.includes(target) || value === undefined || !Number.isInteger(available) || available < 0 || available > 99) {
-  console.error("Pemakaian: node scripts/rooms.js <athaya|alya> <jumlah kamar kosong 0-99>");
+const count = Number(value);
+if (
+  !targets.includes(target) ||
+  !(type in types) ||
+  value === undefined ||
+  !Number.isInteger(count) ||
+  count < 0 ||
+  count > 99
+) {
+  console.error("Pemakaian: node scripts/rooms.js <athaya|alya> <ac|nonac> <jumlah kamar kosong 0-99>");
   console.error("Tanpa argumen: tampilkan status saat ini.");
   process.exit(1);
 }
 
-rooms[target] = { available };
+rooms[target] = { ...rooms[target], [type]: count };
 rooms.updatedAt = new Date().toISOString();
 
 await mkdir(dataDir, { recursive: true });
 const temp = `${file}.tmp`;
 await writeFile(temp, `${JSON.stringify(rooms, null, 2)}\n`);
 await rename(temp, file);
-console.log(`${target}: ${available} kamar kosong (disimpan di ${file})`);
+console.log(`${target} ${types[type]}: ${count} kamar kosong (disimpan di ${file})`);

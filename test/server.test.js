@@ -266,18 +266,23 @@ describe("static website server", () => {
 
     const env = { ...process.env, DATA_DIR: dataDir };
     const script = fileURLToPath(new URL("../scripts/rooms.js", import.meta.url));
-    await execFileAsync(process.execPath, [script, "alya", "2"], { env });
-    await execFileAsync(process.execPath, [script, "athaya", "0"], { env });
-    await assert.rejects(execFileAsync(process.execPath, [script, "alya", "-1"], { env }));
-    await assert.rejects(execFileAsync(process.execPath, [script, "other", "1"], { env }));
+    await execFileAsync(process.execPath, [script, "alya", "ac", "2"], { env });
+    await execFileAsync(process.execPath, [script, "alya", "nonac", "0"], { env });
+    await execFileAsync(process.execPath, [script, "athaya", "ac", "1"], { env });
+    await assert.rejects(execFileAsync(process.execPath, [script, "alya", "ac", "-1"], { env }));
+    await assert.rejects(execFileAsync(process.execPath, [script, "alya", "2"], { env }));
+    await assert.rejects(execFileAsync(process.execPath, [script, "other", "ac", "1"], { env }));
 
     const response = await fetch(`${baseUrl}/api/rooms`);
     const rooms = await response.json();
     assert.equal(response.headers.get("cache-control"), "no-cache");
-    assert.deepEqual({ alya: rooms.alya, athaya: rooms.athaya }, { alya: { available: 2 }, athaya: { available: 0 } });
+    assert.deepEqual({ alya: rooms.alya, athaya: rooms.athaya }, { alya: { ac: 2, nonac: 0 }, athaya: { ac: 1 } });
     assert.ok(!Number.isNaN(Date.parse(rooms.updatedAt)));
 
-    await writeFile(path.join(dataDir, "rooms.json"), JSON.stringify({ alya: { available: "x" }, athaya: { available: 500 } }));
+    await writeFile(
+      path.join(dataDir, "rooms.json"),
+      JSON.stringify({ alya: { ac: "x", nonac: -3 }, athaya: { ac: 500, available: 4 } }),
+    );
     assert.deepEqual(await (await fetch(`${baseUrl}/api/rooms`)).json(), {});
 
     assert.equal((await fetch(`${baseUrl}/api/rooms`, { method: "POST" })).status, 405);
