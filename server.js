@@ -308,6 +308,100 @@ async function readOptional(file) {
   }
 }
 
+const adminStyles = `
+:root{color-scheme:light;--paper:#f8f5ff;--ink:#251d38;--muted:#6d667d;--line:#e8e1f2;--blue:#5339c0;--acid:#dcfa67;font-family:"DM Sans",sans-serif;font-synthesis:none;text-rendering:optimizeLegibility}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);background:radial-gradient(ellipse at 8% 0,rgb(114 85 232/10%),transparent 30rem),var(--paper)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding:0 max(24px,calc((100% - 1120px)/2));border-bottom:1px solid var(--line);background:rgb(255 255 255/80%)}
+.brand{display:inline-flex;align-items:center;gap:11px;color:inherit;text-decoration:none;font-family:Manrope,sans-serif;font-weight:800}
+.mark{display:grid;width:36px;aspect-ratio:1;place-items:center;border:2px solid var(--ink);border-radius:12px;background:var(--acid);font-size:12px;transform:rotate(-5deg)}
+.private-label{color:var(--muted);font-size:12px;font-weight:700}
+main{width:min(1120px,calc(100% - 40px));margin:48px auto}
+nav.admin-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+nav.admin-nav a{padding:8px 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}
+nav.admin-nav a:hover{border-color:var(--blue);color:var(--blue)}
+nav.admin-nav a[aria-current=page]{border-color:var(--ink);background:var(--ink);color:#fff}
+.eyebrow{margin:0 0 8px;color:var(--blue);font-size:12px;font-weight:700;text-transform:uppercase}
+h1{margin:0;font-family:Manrope,sans-serif;font-size:clamp(26px,4vw,34px);line-height:1.15}
+h2{margin:0 0 12px;font-family:Manrope,sans-serif;font-size:16px}
+.intro{margin:10px 0 26px;color:var(--muted);font-size:14px}
+.muted{color:var(--muted);font-size:13px}
+.panel{padding:18px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px}
+.card strong{display:block;font-family:Manrope,sans-serif;font-size:30px;line-height:1.2}
+.card span{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}
+th,td{padding:10px 8px;border-bottom:1px solid #eeeaf4}
+th{background:#f1ecfb;color:#403657;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+th.num,td.num{text-align:right}
+.num{font-variant-numeric:tabular-nums}
+ul.chart{margin:0;padding:0;list-style:none}
+ul.chart li{display:grid;grid-template-columns:3.4rem 1fr 2.5rem;align-items:center;gap:10px;padding:3px 0;font-size:13px}
+.day{color:var(--muted)}
+.bar{display:block;height:12px;min-width:2px;border-radius:3px;background:var(--blue)}
+.ok{margin:0 0 16px;padding:11px 14px;border:1px solid #b9e3c6;border-radius:6px;background:#e6f6ec;color:#146c2e;font-size:14px;font-weight:700}
+form{margin:0}
+.box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:14px}
+.box h2{grid-column:1/-1;margin:0}
+label{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700}
+input{width:100%;min-height:46px;padding:0 13px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font:inherit;font-size:20px}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #9b87f0;outline-offset:2px}
+button{width:100%;min-height:46px;padding:0 16px;border:0;border-radius:6px;background:var(--ink);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+button:hover{background:var(--blue)}
+@media (max-width:600px){header{min-height:60px;padding-inline:16px}main{width:calc(100% - 28px);margin:32px auto}}
+`;
+
+const adminContentSecurityPolicy = [
+  "default-src 'none'",
+  "style-src 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "form-action 'self'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const adminLinks = [
+  ["/admin/logs", "Log akses"],
+  ["/admin/stats", "Statistik"],
+  ["/admin/kamar", "Kamar kosong"],
+];
+
+function renderAdminPage({ title, current, eyebrow, heading, intro, content }) {
+  const links = adminLinks
+    .map(([href, label]) => `<a href="${href}"${href === current ? ' aria-current="page"' : ""}>${label}</a>`)
+    .join("");
+  return `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>${title} | Kost Tiga A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<style>${adminStyles}</style>
+</head>
+<body>
+<header>
+<a class="brand" href="/"><span class="mark">3A</span><span>Kost Tiga A</span></a>
+<span class="private-label">PANEL PRIVAT</span>
+</header>
+<main>
+<nav class="admin-nav" aria-label="Menu admin">${links}</nav>
+<p class="eyebrow">${eyebrow}</p>
+<h1>${heading}</h1>
+<p class="intro">${intro}</p>
+${content}
+</main>
+</body>
+</html>
+`;
+}
+
 function renderStatsPage({ clicks, visitors, rooms, now }) {
   const ranked = (group) =>
     Object.entries(group).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
@@ -315,7 +409,7 @@ function renderStatsPage({ clicks, visitors, rooms, now }) {
     const rows = ranked(group)
       .map(([key, value]) => `<tr><td>${escapeHtml(label(key))}</td><td class="num">${value}</td></tr>`)
       .join("");
-    return `<section><h2>${title}</h2><table>${rows || '<tr><td colspan="2">Belum ada data</td></tr>'}</table></section>`;
+    return `<section class="panel"><h2>${title}</h2><table>${rows || '<tr><td colspan="2">Belum ada data</td></tr>'}</table></section>`;
   };
 
   const days = [];
@@ -338,49 +432,28 @@ function renderStatsPage({ clicks, visitors, rooms, now }) {
     .join("");
   const roomsUpdated = rooms.updatedAt ? `Diperbarui ${escapeHtml(rooms.updatedAt)}` : "Belum diatur";
 
-  return `<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Statistik Kost Tiga A</title>
-<style>
-body{margin:0;font-family:system-ui,sans-serif;background:#f6f4fb;color:#231f33;line-height:1.5}
-main{max-width:960px;margin:0 auto;padding:1.5rem 1rem 3rem}
-h1{margin:0 0 .25rem;font-size:1.6rem}h2{margin:0 0 .5rem;font-size:1.05rem}
-.muted{color:#6b657d;font-size:.9rem;margin:0 0 1.25rem}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:1.25rem}
-.card,section{background:#fff;border-radius:12px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.card strong{display:block;font-size:1.8rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.75rem;margin:.75rem 0}
-table{width:100%;border-collapse:collapse}td,th{padding:.35rem 0;border-bottom:1px solid #eee;text-align:left}th.num,td.num{text-align:right}
-.num{font-variant-numeric:tabular-nums}
-ul.chart{list-style:none;margin:0;padding:0}ul.chart li{display:grid;grid-template-columns:3.2rem 1fr 2.5rem;align-items:center;gap:.5rem;padding:.15rem 0}
-.bar{display:block;height:.8rem;border-radius:4px;background:#6d4de0;min-width:2px}
-</style>
-</head>
-<body>
-<main>
-<h1>Statistik Kost Tiga A</h1>
-<p class="muted">Dibuat ${escapeHtml(now.toISOString())}. Data klik dihitung per hari WIB.</p>
-<div class="cards">
-<div class="card"><strong>${visitors}</strong>Pengunjung unik</div>
-<div class="card"><strong>${clicks.total}</strong>Total klik WhatsApp</div>
-<div class="card"><strong>${clicks.last7}</strong>Klik 7 hari terakhir</div>
-<div class="card"><strong>${clicks.today}</strong>Klik hari ini</div>
+  const content = `<div class="cards">
+<div class="panel card"><strong>${visitors}</strong><span>Pengunjung unik</span></div>
+<div class="panel card"><strong>${clicks.total}</strong><span>Total klik WhatsApp</span></div>
+<div class="panel card"><strong>${clicks.last7}</strong><span>Klik 7 hari terakhir</span></div>
+<div class="panel card"><strong>${clicks.today}</strong><span>Klik hari ini</span></div>
 </div>
-<section><h2>Klik 14 hari terakhir</h2><ul class="chart">${bars}</ul></section>
+<section class="panel"><h2>Klik 14 hari terakhir</h2><ul class="chart">${bars}</ul></section>
 <div class="grid">
 ${table("Per kost", clicks.target, (key) => targetNames[key] ?? key)}
 ${table("Per varian halaman", clicks.page)}
 ${table("Per posisi tombol", clicks.slot)}
-<section><h2>Ketersediaan kamar</h2><table><tr><th>Kost</th><th class="num">AC</th><th class="num">Non-AC</th></tr>${roomRows}</table><p class="muted">${roomsUpdated}</p></section>
-</div>
-</main>
-</body>
-</html>
-`;
+<section class="panel"><h2>Ketersediaan kamar</h2><table><tr><th>Kost</th><th class="num">AC</th><th class="num">Non-AC</th></tr>${roomRows}</table><p class="muted">${roomsUpdated}</p></section>
+</div>`;
+
+  return renderAdminPage({
+    title: "Statistik",
+    current: "/admin/stats",
+    eyebrow: "Administrasi situs",
+    heading: "Statistik situs",
+    intro: `Dibuat ${escapeHtml(now.toISOString())}. Data klik dihitung per hari WIB.`,
+    content,
+  });
 }
 
 function isAdmin(request, adminSecret) {
@@ -424,45 +497,25 @@ function renderRoomsForm(rooms, message) {
           return `<label>${typeLabels[type]}<input type="number" name="${target}-${type}" value="${value}" min="0" max="99" inputmode="numeric" placeholder="-"></label>`;
         })
         .join("");
-      return `<div class="box" role="group" aria-labelledby="g-${target}"><h2 id="g-${target}">${escapeHtml(name)}</h2>${inputs}</div>`;
+      return `<div class="panel box" role="group" aria-labelledby="g-${target}"><h2 id="g-${target}">${escapeHtml(name)}</h2>${inputs}</div>`;
     })
     .join("");
-  const updated = rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}` : "Belum pernah diatur";
+  const updated = rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur.";
 
-  return `<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Kamar kosong - Kost Tiga A</title>
-<style>
-body{margin:0;font-family:system-ui,sans-serif;background:#f6f4fb;color:#231f33;line-height:1.5}
-main{max-width:520px;margin:0 auto;padding:1.5rem 1rem 3rem}
-h1{margin:0 0 .25rem;font-size:1.5rem}.muted{color:#6b657d;font-size:.9rem}
-.ok{background:#e6f6ec;color:#146c2e;padding:.6rem .9rem;border-radius:10px;font-weight:600}
-form{margin-top:1rem}.box{background:#fff;border-radius:12px;padding:1rem;margin:0 0 .75rem;box-shadow:0 1px 3px rgba(0,0,0,.08);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.75rem}
-h2{grid-column:1/-1;margin:0;font-size:1.05rem}
-label{display:grid;gap:.25rem;font-weight:600;min-width:0}
-input{font:inherit;font-size:1.3rem;padding:.6rem;border:1px solid #cfc9df;border-radius:10px;width:100%;box-sizing:border-box}
-button{font:inherit;font-weight:700;width:100%;padding:.85rem;border:0;border-radius:12px;background:#6d4de0;color:#fff;font-size:1.05rem;cursor:pointer}
-a{color:#6d4de0}
-</style>
-</head>
-<body>
-<main>
-<h1>Kamar kosong</h1>
-<p class="muted">Isi jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe itu. ${updated}</p>
-${message ? `<p class="ok" role="status">${escapeHtml(message)}</p>` : ""}
+  const content = `${message ? `<p class="ok" role="status">${escapeHtml(message)}</p>` : ""}
 <form method="post" action="/admin/kamar">
 ${fieldsets}
 <button type="submit">Simpan</button>
-</form>
-<p class="muted"><a href="/admin/stats">Lihat statistik</a></p>
-</main>
-</body>
-</html>
-`;
+</form>`;
+
+  return renderAdminPage({
+    title: "Kamar kosong",
+    current: "/admin/kamar",
+    eyebrow: "Administrasi situs",
+    heading: "Kamar kosong",
+    intro: `Isi jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe itu. ${updated}`,
+    content,
+  });
 }
 
 async function handleAdminRooms(request, response, dataDir, adminSecret) {
@@ -522,6 +575,7 @@ async function handleAdminRooms(request, response, dataDir, adminSecret) {
     "Cache-Control": "no-store",
     "Content-Type": "text/html; charset=utf-8",
     "Content-Length": Buffer.byteLength(body),
+    "Content-Security-Policy": adminContentSecurityPolicy,
     "X-Robots-Tag": "noindex, nofollow",
   });
   response.end(request.method === "HEAD" ? undefined : body);
@@ -555,6 +609,7 @@ async function handleAdminStats(request, response, dataDir, adminSecret) {
     "Cache-Control": "no-store",
     "Content-Type": "text/html; charset=utf-8",
     "Content-Length": Buffer.byteLength(body),
+    "Content-Security-Policy": adminContentSecurityPolicy,
     "X-Robots-Tag": "noindex, nofollow",
   });
   response.end(request.method === "HEAD" ? undefined : body);

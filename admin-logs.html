@@ -30,6 +30,10 @@
     .private-label { color: var(--muted); font-size: 12px; font-weight: 700; }
     main { width: min(1120px, calc(100% - 40px)); margin: 48px auto; }
     .eyebrow { margin: 0 0 8px; color: var(--blue); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    nav.admin-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+    nav.admin-nav a { padding: 8px 14px; border: 1px solid #d7cfe5; border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 700; text-decoration: none; }
+    nav.admin-nav a:hover { border-color: var(--blue); color: var(--blue); }
+    nav.admin-nav a[aria-current=page] { border-color: var(--ink); background: var(--ink); color: #fff; }
     h1 { margin: 0; font-family: Manrope, sans-serif; font-size: clamp(26px, 4vw, 34px); line-height: 1.15; }
     .intro { margin: 10px 0 26px; color: var(--muted); font-size: 14px; }
     .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
@@ -68,6 +72,11 @@
     <span class="private-label">PANEL PRIVAT</span>
   </header>
   <main>
+    <nav class="admin-nav" aria-label="Menu admin">
+      <a href="/admin/logs" aria-current="page">Log akses</a>
+      <a href="/admin/stats">Statistik</a>
+      <a href="/admin/kamar">Kamar kosong</a>
+    </nav>
     <p class="eyebrow">Administrasi situs</p>
     <h1>Log akses pengunjung</h1>
     <p class="intro">Permintaan terbaru ke situs ini. Alamat IP dan waktu mengikuti catatan server.</p>

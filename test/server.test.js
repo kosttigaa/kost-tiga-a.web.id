@@ -328,8 +328,11 @@ describe("static website server", () => {
       const html = await ok.text();
       assert.equal(ok.status, 200);
       assert.equal(ok.headers.get("cache-control"), "no-store");
-      assert.match(html, /<strong>77<\/strong>Pengunjung unik/);
-      assert.match(html, /<strong>1<\/strong>Total klik WhatsApp/);
+      assert.match(html, /<strong>77<\/strong><span>Pengunjung unik<\/span>/);
+      assert.match(html, /<strong>1<\/strong><span>Total klik WhatsApp<\/span>/);
+      assert.match(html, /aria-current="page">Statistik</);
+      assert.match(html, /href="\/admin\/kamar"/);
+      assert.match(ok.headers.get("content-security-policy"), /font-src https:\/\/fonts\.gstatic\.com/);
       assert.ok(!html.includes("<b>x</b>"));
       assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 405);
     } finally {
