@@ -7,7 +7,7 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { buildContentSecurityPolicy, createServer } from "../server.js";
+import { buildContentSecurityPolicy, createServer, summarizeClicks } from "../server.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -287,6 +287,56 @@ describe("static website server", () => {
 
     assert.equal((await fetch(`${baseUrl}/api/rooms`, { method: "POST" })).status, 405);
     await rm(path.join(dataDir, "rooms.json"));
+  });
+
+  it("summarizes clicks per day in WIB and ignores malformed lines", () => {
+    const now = new Date("2026-10-25T10:00:00Z");
+    const text = [
+      JSON.stringify({ ts: "2026-10-25T09:00:00Z", target: "alya", page: "2.html", slot: "hero" }),
+      JSON.stringify({ ts: "2026-10-24T05:00:00Z", target: "alya", page: "2.html", slot: "hero" }),
+      JSON.stringify({ ts: "2026-10-10T01:00:00Z", target: "athaya", page: "index.html", slot: "footer" }),
+      "not json",
+      JSON.stringify({ ts: "bad", target: "alya", page: "2.html", slot: "hero" }),
+      "",
+    ].join("\n");
+    const summary = summarizeClicks(text, now);
+    assert.equal(summary.total, 3);
+    assert.equal(summary.today, 1);
+    assert.equal(summary.last7, 2);
+    assert.deepEqual(summary.days, { "2026-10-25": 1, "2026-10-24": 1, "2026-10-10": 1 });
+    assert.deepEqual(summary.target, { alya: 2, athaya: 1 });
+  });
+
+  it("serves the stats dashboard only with the admin secret", async () => {
+    const secret = "s3cret-value";
+    const statsDir = await mkdtemp(path.join(tmpdir(), "kost-stats-"));
+    const statsServer = createServer({ dataDir: statsDir, adminSecret: secret });
+    await new Promise((resolve) => statsServer.listen(0, "127.0.0.1", resolve));
+    const url = `http://127.0.0.1:${statsServer.address().port}/admin/stats`;
+    try {
+      await writeFile(
+        path.join(statsDir, "clicks.jsonl"),
+        `${JSON.stringify({ ts: new Date().toISOString(), target: "alya", page: "2.html", slot: "<b>x</b>" })}\n`,
+      );
+      await writeFile(path.join(statsDir, "visitors.json"), JSON.stringify({ count: 77 }));
+
+      assert.equal((await fetch(url)).status, 404);
+      assert.equal((await fetch(url, { headers: { "X-Admin-Secret": "wrong" } })).status, 404);
+
+      const ok = await fetch(url, { headers: { "X-Admin-Secret": secret } });
+      const html = await ok.text();
+      assert.equal(ok.status, 200);
+      assert.equal(ok.headers.get("cache-control"), "no-store");
+      assert.match(html, /<strong>77<\/strong>Pengunjung unik/);
+      assert.match(html, /<strong>1<\/strong>Total klik WhatsApp/);
+      assert.ok(!html.includes("<b>x</b>"));
+      assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 405);
+    } finally {
+      await new Promise((resolve) => statsServer.close(resolve));
+      await rm(statsDir, { recursive: true, force: true });
+    }
+
+    assert.equal((await fetch(`${baseUrl}/admin/stats`, { headers: { "X-Admin-Secret": "" } })).status, 404);
   });
 
   it("does not expose the data and scripts directories", async () => {

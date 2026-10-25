@@ -45,6 +45,22 @@ DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js   # lihat status
 
 Angka 0 menampilkan "penuh". Perubahan langsung tampil tanpa restart.
 
+## Dasbor statistik
+
+`/admin/stats` menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar. Halaman ini hanya dilayani jika request membawa header `X-Admin-Secret` yang sama dengan env `ADMIN_SECRET`; tanpa env itu, atau dengan header salah, jawabannya 404. Di produksi nginx yang menambahkan header tersebut setelah basic auth:
+
+```nginx
+location = /admin/stats {
+    auth_basic "Admin";
+    auth_basic_user_file /etc/nginx/.htpasswd;   # samakan dengan yang dipakai /admin/logs
+    proxy_set_header X-Admin-Secret "ISI_RAHASIA";
+    proxy_set_header Host $host;
+    proxy_pass http://127.0.0.1:3000;
+}
+```
+
+Nilai `ISI_RAHASIA` sama dengan `ADMIN_SECRET` di unit systemd (`Environment=ADMIN_SECRET=...`). Untuk mencoba lokal: `ADMIN_SECRET=abc npm start`, lalu `curl -H "X-Admin-Secret: abc" http://localhost:3000/admin/stats`.
+
 ## Tes
 
 ```sh

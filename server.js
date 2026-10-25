@@ -1,4 +1,4 @@
-import { createHash, randomInt } from "node:crypto";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { appendFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
@@ -221,12 +221,7 @@ async function handleClick(request, response, store) {
   response.writeHead(204, { "Cache-Control": "no-store" });
   response.end();
 }
-async function handleRooms(request, response, dataDir) {
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
-    return;
-  }
-
+async function readRooms(dataDir) {
   const rooms = {};
   try {
     const saved = JSON.parse(await readFile(path.join(dataDir, "rooms.json"), "utf8"));
@@ -247,6 +242,16 @@ async function handleRooms(request, response, dataDir) {
       throw error;
     }
   }
+  return rooms;
+}
+
+async function handleRooms(request, response, dataDir) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+    return;
+  }
+
+  const rooms = await readRooms(dataDir);
 
   response.writeHead(200, {
     "Cache-Control": "no-cache",
@@ -254,6 +259,165 @@ async function handleRooms(request, response, dataDir) {
     "X-Content-Type-Options": "nosniff",
   });
   response.end(request.method === "HEAD" ? undefined : JSON.stringify(rooms));
+}
+
+const dayFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" });
+const targetNames = { athaya: "Kost Athaya", alya: "Kost Putri: Alya" };
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+}
+
+export function summarizeClicks(text, now = new Date()) {
+  const summary = { total: 0, today: 0, last7: 0, target: {}, page: {}, slot: {}, days: {} };
+  const add = (group, key) => {
+    group[key] = (group[key] ?? 0) + 1;
+  };
+  const today = dayFormat.format(now);
+  const weekAgo = dayFormat.format(new Date(now.getTime() - 6 * 86_400_000));
+
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const time = new Date(entry?.ts);
+    if (Number.isNaN(time.getTime())) continue;
+
+    const day = dayFormat.format(time);
+    summary.total += 1;
+    if (day === today) summary.today += 1;
+    if (day >= weekAgo && day <= today) summary.last7 += 1;
+    add(summary.target, entry.target);
+    add(summary.page, entry.page);
+    add(summary.slot, `${entry.target} / ${entry.slot}`);
+    add(summary.days, day);
+  }
+  return summary;
+}
+
+async function readOptional(file) {
+  try {
+    return await readFile(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return "";
+    throw error;
+  }
+}
+
+function renderStatsPage({ clicks, visitors, rooms, now }) {
+  const ranked = (group) =>
+    Object.entries(group).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const table = (title, group, label = (key) => key) => {
+    const rows = ranked(group)
+      .map(([key, value]) => `<tr><td>${escapeHtml(label(key))}</td><td class="num">${value}</td></tr>`)
+      .join("");
+    return `<section><h2>${title}</h2><table>${rows || '<tr><td colspan="2">Belum ada data</td></tr>'}</table></section>`;
+  };
+
+  const days = [];
+  for (let offset = 13; offset >= 0; offset -= 1) {
+    days.push(dayFormat.format(new Date(now.getTime() - offset * 86_400_000)));
+  }
+  const peak = Math.max(1, ...days.map((day) => clicks.days[day] ?? 0));
+  const bars = days
+    .map((day) => {
+      const value = clicks.days[day] ?? 0;
+      return `<li><span class="day">${day.slice(5)}</span><span class="bar" style="width:${Math.round((value / peak) * 100)}%"></span><span class="num">${value}</span></li>`;
+    })
+    .join("");
+
+  const roomRows = Object.entries(targetNames)
+    .map(([key, name]) => {
+      const cell = (type) => (Number.isInteger(rooms[key]?.[type]) ? String(rooms[key][type]) : "-");
+      return `<tr><td>${name}</td><td class="num">${cell("ac")}</td><td class="num">${cell("nonac")}</td></tr>`;
+    })
+    .join("");
+  const roomsUpdated = rooms.updatedAt ? `Diperbarui ${escapeHtml(rooms.updatedAt)}` : "Belum diatur";
+
+  return `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Statistik Kost Tiga A</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:#f6f4fb;color:#231f33;line-height:1.5}
+main{max-width:960px;margin:0 auto;padding:1.5rem 1rem 3rem}
+h1{margin:0 0 .25rem;font-size:1.6rem}h2{margin:0 0 .5rem;font-size:1.05rem}
+.muted{color:#6b657d;font-size:.9rem;margin:0 0 1.25rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.card,section{background:#fff;border-radius:12px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card strong{display:block;font-size:1.8rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.75rem;margin:.75rem 0}
+table{width:100%;border-collapse:collapse}td,th{padding:.35rem 0;border-bottom:1px solid #eee;text-align:left}th.num,td.num{text-align:right}
+.num{font-variant-numeric:tabular-nums}
+ul.chart{list-style:none;margin:0;padding:0}ul.chart li{display:grid;grid-template-columns:3.2rem 1fr 2.5rem;align-items:center;gap:.5rem;padding:.15rem 0}
+.bar{display:block;height:.8rem;border-radius:4px;background:#6d4de0;min-width:2px}
+</style>
+</head>
+<body>
+<main>
+<h1>Statistik Kost Tiga A</h1>
+<p class="muted">Dibuat ${escapeHtml(now.toISOString())}. Data klik dihitung per hari WIB.</p>
+<div class="cards">
+<div class="card"><strong>${visitors}</strong>Pengunjung unik</div>
+<div class="card"><strong>${clicks.total}</strong>Total klik WhatsApp</div>
+<div class="card"><strong>${clicks.last7}</strong>Klik 7 hari terakhir</div>
+<div class="card"><strong>${clicks.today}</strong>Klik hari ini</div>
+</div>
+<section><h2>Klik 14 hari terakhir</h2><ul class="chart">${bars}</ul></section>
+<div class="grid">
+${table("Per kost", clicks.target, (key) => targetNames[key] ?? key)}
+${table("Per varian halaman", clicks.page)}
+${table("Per posisi tombol", clicks.slot)}
+<section><h2>Ketersediaan kamar</h2><table><tr><th>Kost</th><th class="num">AC</th><th class="num">Non-AC</th></tr>${roomRows}</table><p class="muted">${roomsUpdated}</p></section>
+</div>
+</main>
+</body>
+</html>
+`;
+}
+
+async function handleAdminStats(request, response, dataDir, adminSecret) {
+  const supplied = Buffer.from(String(request.headers["x-admin-secret"] ?? ""));
+  const expected = Buffer.from(adminSecret ?? "");
+  const authorized =
+    expected.length > 0 && supplied.length === expected.length && timingSafeEqual(supplied, expected);
+  if (!authorized) {
+    sendError(response, 404, "Not Found");
+    return;
+  }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+    return;
+  }
+
+  const now = new Date();
+  const [clickText, visitorText, rooms] = await Promise.all([
+    readOptional(path.join(dataDir, "clicks.jsonl")),
+    readOptional(path.join(dataDir, "visitors.json")),
+    readRooms(dataDir),
+  ]);
+  let visitors = 0;
+  try {
+    const saved = JSON.parse(visitorText || "{}");
+    visitors = Number.isSafeInteger(saved.count) && saved.count >= 0 ? saved.count : 0;
+  } catch {
+  }
+
+  const body = renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now });
+  response.writeHead(200, {
+    "Cache-Control": "no-store",
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
+    "X-Robots-Tag": "noindex, nofollow",
+  });
+  response.end(request.method === "HEAD" ? undefined : body);
 }
 
 const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
@@ -676,7 +840,10 @@ async function serveStaticFile(request, response) {
   stream.pipe(response);
 }
 
-export function createServer({ dataDir = process.env.DATA_DIR || path.join(publicRoot, "data") } = {}) {
+export function createServer({
+  dataDir = process.env.DATA_DIR || path.join(publicRoot, "data"),
+  adminSecret = process.env.ADMIN_SECRET,
+} = {}) {
   const clickStore = createClickStore(dataDir);
   const visitorStore = createVisitorStore(dataDir);
 
@@ -690,6 +857,8 @@ export function createServer({ dataDir = process.env.DATA_DIR || path.join(publi
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
+    } else if (pathname === "/admin/stats") {
+      handler = handleAdminStats(request, response, dataDir, adminSecret);
     } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
       handler = serveHome(request, response);
     } else {
