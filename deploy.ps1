@@ -10,6 +10,11 @@ if ($dirty) {
   Write-Error "Ada perubahan yang belum di-commit. Commit atau batalkan dulu sebelum deploy."
 }
 
+$branch = git branch --show-current
+if (-not $branch) {
+  Write-Error "Tidak bisa deploy dari detached HEAD. Pindah ke branch terlebih dahulu."
+}
+
 $wib = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'SE Asia Standard Time')
 $months = 'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'
 $iso = $wib.ToString("yyyy-MM-dd'T'HH:mm:ss") + '+07:00'
@@ -32,8 +37,8 @@ if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 $server = 'deployer@147.139.130.126'
 $remoteDir = '/var/www/kost-tiga-a.web.id'
 
-git push origin main
-if ($LASTEXITCODE -ne 0) { throw "Push ke GitHub gagal." }
+git push origin "HEAD:refs/heads/$branch"
+if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
 
 # cmd digunakan agar data tar mengalir sebagai biner tanpa diubah PowerShell
 cmd /c "git archive --format=tar HEAD | ssh $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"

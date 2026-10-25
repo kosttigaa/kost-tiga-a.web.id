@@ -12,6 +12,8 @@ npm start
 
 Buka alamat yang ditampilkan di terminal (secara default `http://localhost:3000`). Untuk memilih port lain, atur variabel lingkungan `PORT`. Atur `HOST=127.0.0.1` jika server hanya boleh diakses lewat reverse proxy seperti nginx.
 
+Untuk menguji perubahan dashboard tanpa mengubah `main`, jalankan server lokal dari branch fitur. Di PowerShell, atur `HOST=127.0.0.1`, `ADMIN_USER`, dan `ADMIN_PASSWORD` sebelum `npm start`; ketiga halaman admin akan meminta login yang sama.
+
 ## Statistik klik WhatsApp
 
 Setiap klik tombol WhatsApp dicatat oleh [wa-track.js](./wa-track.js) ke `POST /api/click`, lalu disimpan di `clicks.jsonl` pada folder `DATA_DIR` (default `./data`). Yang dicatat hanya waktu, kost tujuan, varian halaman, dan posisi tombol. IP dan identitas pengunjung tidak disimpan. Tautan `wa.me` tetap berfungsi walau server Node mati.
@@ -82,6 +84,8 @@ location ^~ /admin/ {
 Sebelum memakai blok tersebut, hapus/ganti semua location Nginx lama yang khusus menangani `/admin/logs`, `/admin/stats`, atau `/admin/kamar`; location exact yang lama akan tetap mengalahkan blok di atas. Setelah perubahan Nginx, uji dengan `sudo nginx -t` lalu reload Nginx. Pastikan password yang dipakai Basic Auth cocok dengan `ADMIN_USER`/`ADMIN_PASSWORD` di systemd.
 
 Urutan migrasi VPS: set pasangan environment baru, deploy file aplikasi, restart service Node, lalu ganti location Nginx dan reload. Untuk sementara, server masih menerima header rahasia lama pada statistik/form kamar dan halaman log masih bisa membaca format log Nginx lama, sehingga perpindahan bisa dilakukan bertahap. Setelah blok Nginx baru aktif, hapus konfigurasi `X-Admin-Secret` lama dan `ADMIN_SECRET` dari systemd, lalu restart service.
+
+`deploy.ps1` mengirim branch yang sedang aktif ke VPS dan GitHub. Jadi branch fitur dapat diuji tanpa mengubah `main`; untuk deploy dari branch fitur, jalankan `.\deploy.ps1 -Message "Uji dashboard lokal dan VPS"` setelah semua perubahan di-commit. Kode Node.js yang berubah memerlukan `sudo systemctl restart kost-tiga-a` di VPS. Konfigurasi Nginx dan kredensial systemd tetap harus diterapkan manual sesuai langkah di atas. Untuk kembali, pindah ke `main` lalu deploy lagi; data di `DATA_DIR` tetap terpisah dari kode.
 
 `/admin/logs` menampilkan hingga 1.000 request terakhir yang mencapai Node.js. Data disimpan di `access.jsonl` di dalam `DATA_DIR` (hingga 10.000 baris); query string tidak dicatat. Di VPS, Nginx masih dapat menyajikan file aset statis secara langsung, jadi akses aset yang tidak diteruskan ke Node tidak muncul di dashboard log.
 
