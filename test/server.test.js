@@ -367,7 +367,9 @@ describe("static website server", () => {
       assert.match(await form.text(), /name="alya-ac"/);
 
       assert.equal((await post("alya-ac=2", { Origin: "https://evil.example" })).status, 403);
-      assert.equal((await post("alya-ac=2")).status, 403);
+      assert.equal((await post("alya-ac=2", { Origin: "null" })).status, 403);
+      assert.equal((await post("alya-ac=2", { Origin: "null", "Sec-Fetch-Site": "cross-site" })).status, 403);
+      assert.equal((await post("alya-ac=2", { Origin: "null", "Sec-Fetch-Site": "same-origin" })).status, 303);
       assert.equal((await post("alya-ac=abc", { Origin: `http://${host}` })).status, 400);
       assert.equal((await post("alya-ac=100", { Origin: `http://${host}` })).status, 400);
       const tooLarge = await post("a=" + "x".repeat(3000), { Origin: `http://${host}` }).catch(() => null);

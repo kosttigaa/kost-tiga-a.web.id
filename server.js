@@ -378,7 +378,6 @@ function renderAdminPage({ title, current, eyebrow, heading, intro, content }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<meta name="referrer" content="no-referrer">
 <title>${title} | Kost Tiga A</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -531,7 +530,8 @@ async function handleAdminRooms(request, response, dataDir, adminSecret) {
       originHost = new URL(request.headers.origin ?? "").host;
     } catch {
     }
-    if (originHost !== request.headers.host) {
+    const sameSite = originHost === request.headers.host || request.headers["sec-fetch-site"] === "same-origin";
+    if (!sameSite) {
       sendError(response, 403, "Forbidden");
       return;
     }
