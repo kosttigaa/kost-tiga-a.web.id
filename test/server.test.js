@@ -339,6 +339,58 @@ describe("static website server", () => {
     assert.equal((await fetch(`${baseUrl}/admin/stats`, { headers: { "X-Admin-Secret": "" } })).status, 404);
   });
 
+  it("lets the admin update room availability through a protected form", async () => {
+    const secret = "form-secret";
+    const formDir = await mkdtemp(path.join(tmpdir(), "kost-form-"));
+    const formServer = createServer({ dataDir: formDir, adminSecret: secret });
+    await new Promise((resolve) => formServer.listen(0, "127.0.0.1", resolve));
+    const host = `127.0.0.1:${formServer.address().port}`;
+    const url = `http://${host}/admin/kamar`;
+    const auth = { "X-Admin-Secret": secret };
+    const post = (body, headers = {}) =>
+      fetch(url, {
+        method: "POST",
+        redirect: "manual",
+        headers: { ...auth, "Content-Type": "application/x-www-form-urlencoded", ...headers },
+        body,
+      });
+    try {
+      assert.equal((await fetch(url)).status, 404);
+      assert.equal((await fetch(url, { method: "POST", body: "alya-ac=1" })).status, 404);
+
+      const form = await fetch(url, { headers: auth });
+      assert.equal(form.status, 200);
+      assert.match(await form.text(), /name="alya-ac"/);
+
+      assert.equal((await post("alya-ac=2", { Origin: "https://evil.example" })).status, 403);
+      assert.equal((await post("alya-ac=2")).status, 403);
+      assert.equal((await post("alya-ac=abc", { Origin: `http://${host}` })).status, 400);
+      assert.equal((await post("alya-ac=100", { Origin: `http://${host}` })).status, 400);
+      const tooLarge = await post("a=" + "x".repeat(3000), { Origin: `http://${host}` }).catch(() => null);
+      assert.ok(tooLarge === null || tooLarge.status === 413);
+
+      const saved = await post("alya-ac=2&alya-nonac=0&athaya-ac=&athaya-nonac=5", { Origin: `http://${host}` });
+      assert.equal(saved.status, 303);
+      assert.equal(saved.headers.get("location"), "/admin/kamar?saved=1");
+
+      const rooms = JSON.parse(await readFile(path.join(formDir, "rooms.json"), "utf8"));
+      assert.deepEqual({ alya: rooms.alya, athaya: rooms.athaya }, { alya: { ac: 2, nonac: 0 }, athaya: { nonac: 5 } });
+
+      const again = await fetch(`${url}?saved=1`, { headers: auth });
+      const html = await again.text();
+      assert.match(html, /Tersimpan/);
+      assert.match(html, /name="alya-ac" value="2"/);
+      assert.match(html, /name="athaya-ac" value=""/);
+
+      await post("alya-ac=1", { Origin: `http://${host}` });
+      const updated = JSON.parse(await readFile(path.join(formDir, "rooms.json"), "utf8"));
+      assert.deepEqual(updated.alya, { ac: 1, nonac: 0 });
+    } finally {
+      await new Promise((resolve) => formServer.close(resolve));
+      await rm(formDir, { recursive: true, force: true });
+    }
+  });
+
   it("does not expose the data and scripts directories", async () => {
     for (const route of ["/data/clicks.jsonl", "/scripts/clicks.js"]) {
       assert.equal((await fetch(`${baseUrl}${route}`)).status, 404, route);

@@ -61,6 +61,10 @@ location = /admin/stats {
 
 Nilai `ISI_RAHASIA` sama dengan `ADMIN_SECRET` di unit systemd (`Environment=ADMIN_SECRET=...`). Untuk mencoba lokal: `ADMIN_SECRET=abc npm start`, lalu `curl -H "X-Admin-Secret: abc" http://localhost:3000/admin/stats`.
 
+## Form kamar kosong (`/admin/kamar`)
+
+Alternatif dari CLI: form web yang nyaman dipakai dari HP. Dilindungi dengan cara yang sama seperti `/admin/stats` (header `X-Admin-Secret` dari nginx setelah basic auth), jadi tambahkan blok nginx yang sama untuk `location = /admin/kamar`. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. Karena browser mengirim basic auth otomatis, POST dari situs lain ditolak (header `Origin` harus sama dengan host).
+
 ## Tes
 
 ```sh
