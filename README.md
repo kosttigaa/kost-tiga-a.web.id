@@ -12,6 +12,8 @@ npm start
 
 Buka alamat yang ditampilkan di terminal (secara default `http://localhost:3000`). Untuk memilih port lain, atur variabel lingkungan `PORT`. Atur `HOST=127.0.0.1` jika server hanya boleh diakses lewat reverse proxy seperti nginx.
 
+Untuk menguji perubahan dashboard tanpa mengubah `main`, jalankan server lokal dari branch fitur. Di PowerShell, atur `HOST=127.0.0.1`, `ADMIN_USER`, dan `ADMIN_PASSWORD` sebelum `npm start`; ketiga halaman admin akan meminta login yang sama.
+
 ## Statistik klik WhatsApp
 
 Setiap klik tombol WhatsApp dicatat oleh [wa-track.js](./wa-track.js) ke `POST /api/click`, lalu disimpan di `clicks.jsonl` pada folder `DATA_DIR` (default `./data`). Yang dicatat hanya waktu, kost tujuan, varian halaman, dan posisi tombol. IP dan identitas pengunjung tidak disimpan. Tautan `wa.me` tetap berfungsi walau server Node mati.
@@ -45,25 +47,54 @@ DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js   # lihat status
 
 Angka 0 menampilkan "penuh". Perubahan langsung tampil tanpa restart.
 
-## Dasbor statistik
+## Dashboard admin
 
-`/admin/stats` menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar. Halaman ini hanya dilayani jika request membawa header `X-Admin-Secret` yang sama dengan env `ADMIN_SECRET`; tanpa env itu, atau dengan header salah, jawabannya 404. Di produksi nginx yang menambahkan header tersebut setelah basic auth:
+Log akses, statistik, dan kamar kosong sekarang tersedia pada satu halaman `/dashboard`. Menu di halaman hanya berpindah ke bagian `#logs`, `#stats`, dan `#rooms`; halaman memakai query `?data=logs` untuk memuat data log tanpa membuat route admin terpisah. URL lama `/admin/logs`, `/admin/stats`, dan `/admin/kamar` mengarahkan ke bagian yang sesuai di dashboard.
 
-```nginx
-location = /admin/stats {
-    auth_basic "Admin";
-    auth_basic_user_file /etc/nginx/.htpasswd;   # samakan dengan yang dipakai /admin/logs
-    proxy_set_header X-Admin-Secret "ISI_RAHASIA";
-    proxy_set_header Host $host;
-    proxy_pass http://127.0.0.1:3000;
-}
+Dashboard memakai HTTP Basic Auth dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD`. Atur kedua environment variable tersebut sebelum menjalankan server. Jangan simpan password ke Git.
+
+Di PowerShell lokal:
+
+```powershell
+$env:ADMIN_USER = "admin"
+$env:ADMIN_PASSWORD = "pilih-password-lokal-yang-kuat"
+npm start
 ```
 
-Nilai `ISI_RAHASIA` sama dengan `ADMIN_SECRET` di unit systemd (`Environment=ADMIN_SECRET=...`). Untuk mencoba lokal: `ADMIN_SECRET=abc npm start`, lalu `curl -H "X-Admin-Secret: abc" http://localhost:3000/admin/stats`.
+Di VPS, atur `ADMIN_USER` dan `ADMIN_PASSWORD` di drop-in systemd service Node. Akses dashboard harus lewat HTTPS; Node memeriksa login Basic Auth. Nginx meneruskan header autentikasi ke Node:
 
-## Form kamar kosong (`/admin/kamar`)
+```ini
+[Service]
+Environment=ADMIN_USER=nama-user-htpasswd
+Environment=ADMIN_PASSWORD=password-yang-sama-dengan-htpasswd
+```
 
-Alternatif dari CLI: form web yang nyaman dipakai dari HP. Dilindungi dengan cara yang sama seperti `/admin/stats` (header `X-Admin-Secret` dari nginx setelah basic auth), jadi tambahkan blok nginx yang sama untuk `location = /admin/kamar`. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. Karena browser mengirim basic auth otomatis, POST dari situs lain ditolak (header `Origin` harus sama dengan host).
+Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; jangan menaruhnya di repository atau mengirimkannya lewat chat. Simpan konfigurasi, lalu jalankan `sudo systemctl daemon-reload`.
+
+```nginx
+location = /dashboard {
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://127.0.0.1:3000;
+}
+
+```
+
+`admin-logs.html` lama hanya mengarahkan ke `/dashboard#logs` jika masih disajikan langsung oleh konfigurasi Nginx lama. Hapus konfigurasi Nginx lama yang secara langsung menyajikan halaman log atau menambahkan `X-Admin-Secret`; location lama dapat mengambil alih permintaan sebelum Node menerimanya. Setelah perubahan, uji dengan `sudo nginx -t` lalu reload Nginx.
+
+Migrasi VPS harus dilakukan setelah deploy branch fitur: set kredensial systemd, tambahkan location `/dashboard` di Nginx, lalu hapus konfigurasi lama untuk `/admin/*`, uji dan reload Nginx, kemudian restart Node. Jangan deploy sebelum siap melakukan perubahan konfigurasi Nginx karena route admin lama akan diganti menjadi 404. Setelah migrasi, hapus `ADMIN_SECRET` lama dari systemd.
+
+`deploy.ps1` mengirim branch yang sedang aktif ke VPS dan GitHub. Jadi branch fitur dapat diuji tanpa mengubah `main`; untuk deploy dari branch fitur, jalankan `.\deploy.ps1 -Message "Dashboard satu halaman"` setelah semua perubahan di-commit. Konfigurasi Nginx dan kredensial systemd tetap harus diterapkan manual. Untuk kembali, pindah ke `main` lalu deploy lagi dan pulihkan konfigurasi Nginx sebelumnya; data di `DATA_DIR` tetap terpisah dari kode.
+
+Bagian Log akses menampilkan hingga 1.000 request terakhir yang mencapai Node.js. Data disimpan di `access.jsonl` di dalam `DATA_DIR` (hingga 10.000 baris); query string tidak dicatat. Di VPS, Nginx masih dapat menyajikan file aset statis secara langsung, jadi akses aset yang tidak diteruskan ke Node tidak muncul di log.
+
+Bagian Statistik menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari ini, grafik 14 hari, per kost/varian/posisi tombol), dan ketersediaan kamar.
+
+## Form kamar kosong
+
+Form web pada bagian Kamar kosong nyaman dipakai dari HP dan dilindungi Basic Auth yang sama. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. POST dari situs lain ditolak (header `Origin` harus sama dengan host).
 
 ## Cap "Terakhir diperbarui"
 

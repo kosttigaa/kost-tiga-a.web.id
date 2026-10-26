@@ -11,6 +11,13 @@ import { buildContentSecurityPolicy, createServer, formatUpdatedTime, summarizeC
 
 const execFileAsync = promisify(execFile);
 
+async function closeTestServer(testServer) {
+  await new Promise((resolve, reject) => {
+    testServer.close((error) => (error ? reject(error) : resolve()));
+  });
+  await testServer.flushAccessLogs();
+}
+
 describe("static website server", () => {
   let dataDir;
   let server;
@@ -24,9 +31,7 @@ describe("static website server", () => {
   });
 
   after(async () => {
-    await new Promise((resolve, reject) => {
-      server.close((error) => (error ? reject(error) : resolve()));
-    });
+    await closeTestServer(server);
     await rm(dataDir, { recursive: true, force: true });
   });
 
@@ -308,12 +313,12 @@ describe("static website server", () => {
     assert.deepEqual(summary.target, { alya: 2, athaya: 1 });
   });
 
-  it("serves the stats dashboard only with the admin secret", async () => {
+  it("serves a single dashboard with the admin secret", async () => {
     const secret = "s3cret-value";
     const statsDir = await mkdtemp(path.join(tmpdir(), "kost-stats-"));
     const statsServer = createServer({ dataDir: statsDir, adminSecret: secret });
     await new Promise((resolve) => statsServer.listen(0, "127.0.0.1", resolve));
-    const url = `http://127.0.0.1:${statsServer.address().port}/admin/stats`;
+    const url = `http://127.0.0.1:${statsServer.address().port}/dashboard`;
     try {
       await writeFile(
         path.join(statsDir, "clicks.jsonl"),
@@ -330,17 +335,75 @@ describe("static website server", () => {
       assert.equal(ok.headers.get("cache-control"), "no-store");
       assert.match(html, /<strong>77<\/strong><span>Pengunjung unik<\/span>/);
       assert.match(html, /<strong>1<\/strong><span>Total klik WhatsApp<\/span>/);
-      assert.match(html, /aria-current="page">Statistik</);
-      assert.match(html, /href="\/admin\/kamar"/);
+      assert.match(html, /href="\/dashboard#logs"/);
+      assert.match(html, /href="\/dashboard#stats"/);
+      assert.match(html, /href="\/dashboard#rooms"/);
+      assert.match(html, /id="logs"/);
+      assert.match(html, /id="stats"[^>]* hidden/);
+      assert.match(html, /id="rooms"[^>]* hidden/);
       assert.match(ok.headers.get("content-security-policy"), /font-src https:\/\/fonts\.gstatic\.com/);
       assert.ok(!html.includes("<b>x</b>"));
-      assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 405);
+      assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 403);
+      for (const [route, location] of [
+        ["/admin/logs", "/dashboard#logs"],
+        ["/admin/stats", "/dashboard#stats"],
+        ["/admin/kamar", "/dashboard#rooms"],
+      ]) {
+        const legacy = await fetch(`${url.replace("/dashboard", "")}${route}`, {
+          redirect: "manual",
+          headers: { "X-Admin-Secret": secret },
+        });
+        assert.equal(legacy.status, 308, route);
+        assert.equal(legacy.headers.get("location"), location);
+      }
+      assert.equal((await fetch(`${url.replace("/dashboard", "")}/admin-logs.html`)).status, 404);
     } finally {
-      await new Promise((resolve) => statsServer.close(resolve));
+      await closeTestServer(statsServer);
       await rm(statsDir, { recursive: true, force: true });
     }
 
-    assert.equal((await fetch(`${baseUrl}/admin/stats`, { headers: { "X-Admin-Secret": "" } })).status, 404);
+    assert.equal((await fetch(`${baseUrl}/dashboard`, { headers: { "X-Admin-Secret": "" } })).status, 503);
+  });
+
+  it("serves one dashboard with shared Basic Auth and records Node requests", async () => {
+    const password = "a-strong-test-password";
+    const logsDir = await mkdtemp(path.join(tmpdir(), "kost-admin-logs-"));
+    const logsServer = createServer({ dataDir: logsDir, adminUser: "admin", adminPassword: password });
+    await new Promise((resolve) => logsServer.listen(0, "127.0.0.1", resolve));
+    const origin = `http://127.0.0.1:${logsServer.address().port}`;
+    const auth = {
+      Authorization: `Basic ${Buffer.from(`admin:${password}`).toString("base64")}`,
+    };
+    try {
+      const unauthenticated = await fetch(`${origin}/dashboard`);
+      assert.equal(unauthenticated.status, 401);
+      assert.match(unauthenticated.headers.get("www-authenticate"), /^Basic realm=/);
+
+      const page = await fetch(`${origin}/dashboard`, { headers: auth });
+      assert.equal(page.status, 200);
+      assert.equal(page.headers.get("cache-control"), "no-store");
+      assert.match(await page.text(), /Log akses/);
+
+      const home = await fetch(origin, { headers: { "User-Agent": "TestBrowser/1.0" } });
+      assert.equal(home.status, 200);
+      await home.arrayBuffer();
+
+      for (const route of ["/admin/logs", "/admin/stats", "/admin/kamar"]) {
+        const legacy = await fetch(`${origin}${route}`, { headers: auth, redirect: "manual" });
+        assert.equal(legacy.status, 308);
+        assert.match(legacy.headers.get("location"), /^\/dashboard#/);
+      }
+
+      const logResponse = await fetch(`${origin}/dashboard?data=logs`, { headers: auth });
+      assert.equal(logResponse.status, 200);
+      const entries = await logResponse.json();
+      assert.ok(entries.some((entry) => entry.path === "/" && entry.status === 200 && entry.userAgent === "TestBrowser/1.0"));
+      assert.ok(entries.some((entry) => entry.path === "/dashboard" && entry.status === 200));
+      assert.ok((await readFile(path.join(logsDir, "access.jsonl"), "utf8")).includes("/dashboard"));
+    } finally {
+      await closeTestServer(logsServer);
+      await rm(logsDir, { recursive: true, force: true });
+    }
   });
 
   it("lets the admin update room availability through a protected form", async () => {
@@ -349,7 +412,7 @@ describe("static website server", () => {
     const formServer = createServer({ dataDir: formDir, adminSecret: secret });
     await new Promise((resolve) => formServer.listen(0, "127.0.0.1", resolve));
     const host = `127.0.0.1:${formServer.address().port}`;
-    const url = `http://${host}/admin/kamar`;
+    const url = `http://${host}/dashboard`;
     const auth = { "X-Admin-Secret": secret };
     const post = (body, headers = {}) =>
       fetch(url, {
@@ -377,7 +440,7 @@ describe("static website server", () => {
 
       const saved = await post("alya-ac=2&alya-nonac=0&athaya-ac=&athaya-nonac=5", { Origin: `http://${host}` });
       assert.equal(saved.status, 303);
-      assert.equal(saved.headers.get("location"), "/admin/kamar?saved=1");
+      assert.equal(saved.headers.get("location"), "/dashboard?saved=1#rooms");
 
       const rooms = JSON.parse(await readFile(path.join(formDir, "rooms.json"), "utf8"));
       assert.deepEqual({ alya: rooms.alya, athaya: rooms.athaya }, { alya: { ac: 2, nonac: 0 }, athaya: { nonac: 5 } });
@@ -392,7 +455,7 @@ describe("static website server", () => {
       const updated = JSON.parse(await readFile(path.join(formDir, "rooms.json"), "utf8"));
       assert.deepEqual(updated.alya, { ac: 1, nonac: 0 });
     } finally {
-      await new Promise((resolve) => formServer.close(resolve));
+      await closeTestServer(formServer);
       await rm(formDir, { recursive: true, force: true });
     }
   });
@@ -428,7 +491,7 @@ describe("static website server", () => {
       assert.ok(after.includes(formatUpdatedTime(future).label));
       assert.equal(new Date(response.headers.get("last-modified")).getTime(), Math.floor(future.getTime() / 1000) * 1000);
     } finally {
-      await new Promise((resolve) => stampServer.close(resolve));
+      await closeTestServer(stampServer);
       await rm(stampDir, { recursive: true, force: true });
     }
   });
@@ -466,7 +529,7 @@ describe("static website server", () => {
       assert.equal((await (await fetch(url)).json()).value, 10);
       assert.equal((await (await fetch(url, { method: "POST" })).json()).value, 11);
     } finally {
-      await new Promise((resolve) => restarted.close(resolve));
+      await closeTestServer(restarted);
     }
 
     let limited = 0;
