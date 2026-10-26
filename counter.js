@@ -13,12 +13,16 @@
   } catch {
   }
 
-  const method = alreadyCounted ? "GET" : "POST";
+  const request = (method) =>
+    fetch(endpoint, { method, cache: "no-store" }).then((response) =>
+      response.ok ? response.json() : Promise.reject(new Error(String(response.status))),
+    );
 
-  fetch(endpoint, { method, cache: "no-store" })
-    .then((response) => (response.ok ? response.json() : Promise.reject()))
-    .then((data) => {
-      if (!alreadyCounted) {
+  // Jika penghitungan ditolak (mis. batas hit atau jaringan seluler), tetap tampilkan angka lewat GET
+  (alreadyCounted ? request("GET") : request("POST").then((data) => ({ data, counted: true }), () => request("GET").then((data) => ({ data, counted: false }))))
+    .then((result) => {
+      const data = alreadyCounted ? result : result.data;
+      if (!alreadyCounted && result.counted) {
         try {
           localStorage.setItem(storageKey, "1");
         } catch {
