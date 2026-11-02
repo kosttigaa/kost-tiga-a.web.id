@@ -1,4 +1,4 @@
-import { createHash, randomInt, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { appendFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
@@ -375,6 +375,9 @@ nav.admin-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
 nav.admin-nav a{padding:8px 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}
 nav.admin-nav a:hover{border-color:var(--blue);color:var(--blue)}
 nav.admin-nav a[aria-current=page]{border-color:var(--ink);background:var(--ink);color:#fff}
+nav.admin-nav form{margin-left:auto}
+nav.admin-nav button{width:auto;min-height:36px;padding:0 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+nav.admin-nav button:hover{border-color:var(--blue);color:var(--blue)}
 .eyebrow{margin:0 0 8px;color:var(--blue);font-size:12px;font-weight:700;text-transform:uppercase}
 h1{margin:0;font-family:Manrope,sans-serif;font-size:clamp(26px,4vw,34px);line-height:1.15}
 h2{margin:0 0 12px;font-family:Manrope,sans-serif;font-size:16px}
@@ -436,10 +439,10 @@ const legacyAdminRoutes = new Map([
   ["/admin/kamar", "/dashboard#rooms"],
 ]);
 
-function renderAdminPage({ title, content }) {
+function renderAdminPage({ title, content, showNavigation = true, showLogout = false }) {
   const links = adminLinks
     .map(([href, label], index) => `<a href="${href}"${index === 0 ? ' aria-current="page"' : ""}>${label}</a>`)
-    .join("");
+    .join("") + (showLogout ? '<form method="post" action="/dashboard/logout"><button type="submit">Keluar</button></form>' : "");
   return `<!doctype html>
 <html lang="id">
 <head>
@@ -458,7 +461,7 @@ function renderAdminPage({ title, content }) {
 <span class="private-label">PANEL PRIVAT</span>
 </header>
 <main>
-<nav class="admin-nav" aria-label="Menu admin">${links}</nav>
+${showNavigation ? `<nav class="admin-nav" aria-label="Menu admin">${links}</nav>` : ""}
 ${content}
 </main>
 </body>
@@ -522,21 +525,47 @@ function matchesSecret(suppliedValue, expectedValue) {
   return expected.length > 0 && supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-function isAdmin(request, auth) {
-  const authorization = request.headers.authorization ?? "";
-  const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/.exec(authorization);
-  if (match && auth.adminUser && auth.adminPassword) {
-    const decoded = Buffer.from(match[1], "base64").toString("utf8");
-    const separator = decoded.indexOf(":");
-    if (
-      separator >= 0 &&
-      matchesSecret(decoded.slice(0, separator), auth.adminUser) &&
-      matchesSecret(decoded.slice(separator + 1), auth.adminPassword)
-    ) {
-      return true;
-    }
+const adminSessionCookie = "kost-admin-session";
+const adminSessionMaxAge = 8 * 60 * 60;
+
+function getAdminSession(request, sessions) {
+  const cookie = new RegExp(`(?:^|;\\s*)${adminSessionCookie}=([a-f0-9]{64})(?:;|$)`).exec(request.headers.cookie ?? "");
+  if (!cookie) return null;
+  const expiresAt = sessions.get(cookie[1]);
+  if (!expiresAt || expiresAt <= Date.now()) {
+    sessions.delete(cookie[1]);
+    return null;
   }
-  return matchesSecret(request.headers["x-admin-secret"], auth.adminSecret);
+  return cookie[1];
+}
+
+function isAdmin(request, auth, sessions) {
+  return Boolean(getAdminSession(request, sessions)) || matchesSecret(request.headers["x-admin-secret"], auth.adminSecret);
+}
+
+function isSameOriginRequest(request) {
+  let originHost = null;
+  try {
+    originHost = new URL(request.headers.origin ?? "").host;
+  } catch {}
+  return originHost === request.headers.host || request.headers["sec-fetch-site"] === "same-origin";
+}
+
+function adminPageHeaders(body) {
+  return {
+    "Cache-Control": "no-store",
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
+    "Content-Security-Policy": dashboardCsp(),
+    "X-Robots-Tag": "noindex, nofollow",
+  };
+}
+
+function renderAdminLoginPage(message = "") {
+  const content = `<p class="eyebrow">Administrasi situs</p><h1>Masuk ke dashboard</h1>
+<p class="intro">Gunakan akun admin untuk melanjutkan.</p>${message ? '<p class="ok" role="alert">' + message + "</p>" : ""}
+<form method="post" action="/dashboard" class="panel"><div class="box"><label>Username<input name="username" autocomplete="username" required></label><label>Password<input type="password" name="password" autocomplete="current-password" required></label></div><button type="submit">Masuk</button></form>`;
+  return renderAdminPage({ title: "Masuk", content, showNavigation: false });
 }
 
 function rejectAdmin(response, auth) {
@@ -588,14 +617,69 @@ function dashboardCsp() {
   ].join("; ");
 }
 
-async function handleAdminDashboard(request, response, dataDir, accessLogs, auth) {
-  if (!isAdmin(request, auth)) {
-    rejectAdmin(response, auth);
+async function handleAdminDashboard(request, response, dataDir, accessLogs, auth, sessions) {
+  const url = new URL(request.url, "http://localhost");
+  const pathname = url.pathname;
+  if (pathname === "/dashboard" && request.method === "POST" && auth.adminUser && auth.adminPassword) {
+    if (!isSameOriginRequest(request)) {
+      sendError(response, 403, "Forbidden");
+      return;
+    }
+    let form;
+    try {
+      form = new URLSearchParams(await readSmallBody(request));
+    } catch (error) {
+      sendError(response, error.statusCode === 413 ? 413 : 400, error.statusCode === 413 ? "Payload Too Large" : "Bad Request");
+      return;
+    }
+    if (!matchesSecret(form.get("username"), auth.adminUser) || !matchesSecret(form.get("password"), auth.adminPassword)) {
+      const body = renderAdminLoginPage("Username atau password salah.");
+      response.writeHead(401, adminPageHeaders(body));
+      response.end(body);
+      return;
+    }
+    const token = randomBytes(32).toString("hex");
+    sessions.set(token, Date.now() + adminSessionMaxAge * 1000);
+    const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
+    response.writeHead(303, {
+      Location: "/dashboard",
+      "Cache-Control": "no-store",
+      "Set-Cookie": `${adminSessionCookie}=${token}; Max-Age=${adminSessionMaxAge}; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
+    });
+    response.end();
+    return;
+  }
+  if (pathname === "/dashboard/logout") {
+    if (request.method !== "POST") {
+      sendError(response, 405, "Method Not Allowed", { Allow: "POST" });
+      return;
+    }
+    if (!isSameOriginRequest(request)) {
+      sendError(response, 403, "Forbidden");
+      return;
+    }
+    const token = getAdminSession(request, sessions);
+    if (token) sessions.delete(token);
+    const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
+    response.writeHead(303, {
+      Location: "/dashboard",
+      "Cache-Control": "no-store",
+      "Set-Cookie": `${adminSessionCookie}=; Max-Age=0; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
+    });
+    response.end();
+    return;
+  }
+  if (!isAdmin(request, auth, sessions)) {
+    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/dashboard" && url.searchParams.get("data") !== "logs" && auth.adminUser && auth.adminPassword) {
+      const body = renderAdminLoginPage();
+      response.writeHead(200, adminPageHeaders(body));
+      response.end(request.method === "HEAD" ? undefined : body);
+    } else {
+      rejectAdmin(response, auth);
+    }
     return;
   }
 
-  const url = new URL(request.url, "http://localhost");
-  const pathname = url.pathname;
   if (pathname === "/dashboard" && url.searchParams.get("data") === "logs") {
     if (request.method !== "GET") {
       sendError(response, 405, "Method Not Allowed", { Allow: "GET" });
@@ -618,11 +702,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
   }
 
   if (request.method === "POST") {
-    let originHost = null;
-    try {
-      originHost = new URL(request.headers.origin ?? "").host;
-    } catch {}
-    if (originHost !== request.headers.host && request.headers["sec-fetch-site"] !== "same-origin") {
+    if (!isSameOriginRequest(request)) {
       sendError(response, 403, "Forbidden");
       return;
     }
@@ -673,14 +753,8 @@ ${renderLogsSection()}
 ${renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now })}
 <section id="rooms" class="dashboard-section" aria-labelledby="rooms-title" hidden><p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1><p class="intro">Atur jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe. ${rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur."}</p>${renderRoomsForm(rooms, notice)}</section>
 <script>${dashboardScript}</script>`;
-  const body = renderAdminPage({ title: "Dashboard", content });
-  response.writeHead(200, {
-    "Cache-Control": "no-store",
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
-    "Content-Security-Policy": dashboardCsp(),
-    "X-Robots-Tag": "noindex, nofollow",
-  });
+  const body = renderAdminPage({ title: "Dashboard", content, showLogout: Boolean(getAdminSession(request, sessions)) });
+  response.writeHead(200, adminPageHeaders(body));
   response.end(request.method === "HEAD" ? undefined : body);
 }
 
@@ -1223,6 +1297,7 @@ export function createServer({
     throw new Error("ADMIN_USER must not contain a colon.");
   }
   const adminAuth = { adminUser, adminPassword, adminSecret };
+  const adminSessions = new Map();
   const clickStore = createClickStore(dataDir);
   const visitorStore = createVisitorStore(dataDir);
   const accessLogs = createAccessLogStore(dataDir);
@@ -1252,10 +1327,10 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
-    } else if (pathname === "/dashboard" || pathname === "/dashboard/") {
-      handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth);
+    } else if (pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard/logout") {
+      handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth, adminSessions);
     } else if (legacyAdminRoutes.has(pathname)) {
-      if (!isAdmin(request, adminAuth)) {
+      if (!isAdmin(request, adminAuth, adminSessions)) {
         rejectAdmin(response, adminAuth);
         return;
       }

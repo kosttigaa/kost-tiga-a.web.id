@@ -365,41 +365,59 @@ describe("static website server", () => {
     assert.equal((await fetch(`${baseUrl}/dashboard`, { headers: { "X-Admin-Secret": "" } })).status, 503);
   });
 
-  it("serves one dashboard with shared Basic Auth and records Node requests", async () => {
+  it("supports dashboard login and logout with revocable sessions", async () => {
     const password = "a-strong-test-password";
     const logsDir = await mkdtemp(path.join(tmpdir(), "kost-admin-logs-"));
     const logsServer = createServer({ dataDir: logsDir, adminUser: "admin", adminPassword: password });
     await new Promise((resolve) => logsServer.listen(0, "127.0.0.1", resolve));
     const origin = `http://127.0.0.1:${logsServer.address().port}`;
-    const auth = {
-      Authorization: `Basic ${Buffer.from(`admin:${password}`).toString("base64")}`,
-    };
     try {
       const unauthenticated = await fetch(`${origin}/dashboard`);
-      assert.equal(unauthenticated.status, 401);
-      assert.match(unauthenticated.headers.get("www-authenticate"), /^Basic realm=/);
+      assert.equal(unauthenticated.status, 200);
+      assert.match(await unauthenticated.text(), /name="username"/);
 
-      const page = await fetch(`${origin}/dashboard`, { headers: auth });
+      const login = await fetch(`${origin}/dashboard`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ username: "admin", password }),
+      });
+      assert.equal(login.status, 303);
+      const cookie = login.headers.get("set-cookie").split(";")[0];
+
+      const page = await fetch(`${origin}/dashboard`, { headers: { Cookie: cookie } });
       assert.equal(page.status, 200);
       assert.equal(page.headers.get("cache-control"), "no-store");
-      assert.match(await page.text(), /Log akses/);
+      const html = await page.text();
+      assert.match(html, /Log akses/);
+      assert.match(html, /<button type="submit">Keluar<\/button>/);
 
       const home = await fetch(origin, { headers: { "User-Agent": "TestBrowser/1.0" } });
       assert.equal(home.status, 200);
       await home.arrayBuffer();
 
       for (const route of ["/admin/logs", "/admin/stats", "/admin/kamar"]) {
-        const legacy = await fetch(`${origin}${route}`, { headers: auth, redirect: "manual" });
+        const legacy = await fetch(`${origin}${route}`, { headers: { Cookie: cookie }, redirect: "manual" });
         assert.equal(legacy.status, 308);
         assert.match(legacy.headers.get("location"), /^\/dashboard#/);
       }
 
-      const logResponse = await fetch(`${origin}/dashboard?data=logs`, { headers: auth });
+      const logResponse = await fetch(`${origin}/dashboard?data=logs`, { headers: { Cookie: cookie } });
       assert.equal(logResponse.status, 200);
       const entries = await logResponse.json();
       assert.ok(entries.some((entry) => entry.path === "/" && entry.status === 200 && entry.userAgent === "TestBrowser/1.0"));
       assert.ok(entries.some((entry) => entry.path === "/dashboard" && entry.status === 200));
       assert.ok((await readFile(path.join(logsDir, "access.jsonl"), "utf8")).includes("/dashboard"));
+
+      const logout = await fetch(`${origin}/dashboard/logout`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { Cookie: cookie, Origin: origin },
+      });
+      assert.equal(logout.status, 303);
+      assert.match(logout.headers.get("set-cookie"), /Max-Age=0/);
+      assert.equal((await fetch(`${origin}/dashboard`, { headers: { Cookie: cookie } })).status, 200);
+      assert.equal((await fetch(`${origin}/dashboard?data=logs`, { headers: { Cookie: cookie } })).status, 401);
     } finally {
       await closeTestServer(logsServer);
       await rm(logsDir, { recursive: true, force: true });

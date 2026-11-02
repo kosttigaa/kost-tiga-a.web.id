@@ -51,7 +51,7 @@ Angka 0 menampilkan "penuh". Perubahan langsung tampil tanpa restart.
 
 Log akses, statistik, dan kamar kosong sekarang tersedia pada satu halaman `/dashboard`. Menu di halaman hanya berpindah ke bagian `#logs`, `#stats`, dan `#rooms`; halaman memakai query `?data=logs` untuk memuat data log tanpa membuat route admin terpisah. URL lama `/admin/logs`, `/admin/stats`, dan `/admin/kamar` mengarahkan ke bagian yang sesuai di dashboard.
 
-Dashboard memakai HTTP Basic Auth dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD`. Atur kedua environment variable tersebut sebelum menjalankan server. Jangan simpan password ke Git.
+Dashboard memakai form login dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD`. Setelah login, server membuat sesi cookie `HttpOnly` yang berlaku 8 jam; tombol Keluar mencabut sesi tersebut. HTTP Basic Auth tidak digunakan lagi. Atur kedua environment variable sebelum menjalankan server dan jangan simpan password ke Git.
 
 Di PowerShell lokal:
 
@@ -61,7 +61,7 @@ $env:ADMIN_PASSWORD = "pilih-password-lokal-yang-kuat"
 npm start
 ```
 
-Di VPS, atur `ADMIN_USER` dan `ADMIN_PASSWORD` di drop-in systemd service Node. Akses dashboard harus lewat HTTPS; Node memeriksa login Basic Auth. Nginx meneruskan header autentikasi ke Node:
+Di VPS, atur `ADMIN_USER` dan `ADMIN_PASSWORD` di drop-in systemd service Node. Akses dashboard harus lewat HTTPS agar cookie sesi memakai atribut `Secure`:
 
 ```ini
 [Service]
@@ -72,8 +72,7 @@ Environment=ADMIN_PASSWORD=password-yang-sama-dengan-htpasswd
 Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; jangan menaruhnya di repository atau mengirimkannya lewat chat. Simpan konfigurasi, lalu jalankan `sudo systemctl daemon-reload`.
 
 ```nginx
-location = /dashboard {
-    proxy_set_header Authorization $http_authorization;
+location /dashboard {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -94,7 +93,7 @@ Bagian Statistik menampilkan pengunjung unik, klik WhatsApp (total, 7 hari, hari
 
 ## Form kamar kosong
 
-Form web pada bagian Kamar kosong nyaman dipakai dari HP dan dilindungi Basic Auth yang sama. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. POST dari situs lain ditolak (header `Origin` harus sama dengan host).
+Form web pada bagian Kamar kosong nyaman dipakai dari HP dan dilindungi sesi dashboard yang sama. Kolom yang dikosongkan tidak mengubah/menampilkan tipe itu, angka 0 berarti penuh. POST dari situs lain ditolak (header `Origin` harus sama dengan host).
 
 ## Cap "Terakhir diperbarui"
 
