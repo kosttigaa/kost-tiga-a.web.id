@@ -44,4 +44,10 @@ if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
 cmd /c "git archive --format=tar HEAD | ssh $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
 if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke VPS gagal." }
 
+ssh $server "sudo -n /usr/bin/systemctl restart kost-tiga-a.service"
+if ($LASTEXITCODE -ne 0) { throw "Restart gagal. Pasang aturan sudoers NOPASSWD untuk kost-tiga-a.service." }
+
+ssh $server "systemctl is-active --quiet kost-tiga-a.service"
+if ($LASTEXITCODE -ne 0) { throw "Service kost-tiga-a tidak aktif setelah restart." }
+
 Write-Output "Deploy selesai. Terakhir diperbarui: $label"

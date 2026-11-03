@@ -71,6 +71,14 @@ Environment=ADMIN_PASSWORD=password-yang-sama-dengan-htpasswd
 
 Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; jangan menaruhnya di repository atau mengirimkannya lewat chat. Simpan konfigurasi, lalu jalankan `sudo systemctl daemon-reload`.
 
+Agar deploy oleh user `deployer` dapat me-restart service tanpa password, admin root perlu memasang aturan sudoers satu kali lewat `sudo visudo -f /etc/sudoers.d/kost-tiga-a-deployer`:
+
+```sudoers
+deployer ALL=(root) NOPASSWD: /usr/bin/systemctl restart kost-tiga-a.service
+```
+
+Validasi dengan `sudo visudo -cf /etc/sudoers.d/kost-tiga-a-deployer`. Aturan ini hanya mengizinkan restart service tersebut. `deploy.ps1` menggunakan `sudo -n` agar gagal langsung dengan pesan yang jelas jika aturan belum dipasang, lalu memeriksa service kembali aktif.
+
 ```nginx
 location /dashboard {
     proxy_set_header X-Real-IP $remote_addr;
@@ -83,7 +91,7 @@ location /dashboard {
 
 `admin-logs.html` lama hanya mengarahkan ke `/dashboard#logs` jika masih disajikan langsung oleh konfigurasi Nginx lama. Hapus konfigurasi Nginx lama yang secara langsung menyajikan halaman log atau menambahkan `X-Admin-Secret`; location lama dapat mengambil alih permintaan sebelum Node menerimanya. Setelah perubahan, uji dengan `sudo nginx -t` lalu reload Nginx.
 
-Migrasi VPS harus dilakukan setelah deploy branch fitur: set kredensial systemd, tambahkan location `/dashboard` di Nginx, lalu hapus konfigurasi lama untuk `/admin/*`, uji dan reload Nginx, kemudian restart Node. Jangan deploy sebelum siap melakukan perubahan konfigurasi Nginx karena route admin lama akan diganti menjadi 404. Setelah migrasi, hapus `ADMIN_SECRET` lama dari systemd.
+Migrasi VPS harus dilakukan setelah deploy branch fitur: set kredensial systemd, tambahkan location `/dashboard` di Nginx, lalu hapus konfigurasi lama untuk `/admin/*`, uji dan reload Nginx. Deploy berikutnya akan me-restart Node secara otomatis. Jangan deploy sebelum siap melakukan perubahan konfigurasi Nginx karena route admin lama akan diganti menjadi 404. Setelah migrasi, hapus `ADMIN_SECRET` lama dari systemd.
 
 `deploy.ps1` mengirim branch yang sedang aktif ke VPS dan GitHub. Jadi branch fitur dapat diuji tanpa mengubah `main`; untuk deploy dari branch fitur, jalankan `.\deploy.ps1 -Message "Dashboard satu halaman"` setelah semua perubahan di-commit. Konfigurasi Nginx dan kredensial systemd tetap harus diterapkan manual. Untuk kembali, pindah ke `main` lalu deploy lagi dan pulihkan konfigurasi Nginx sebelumnya; data di `DATA_DIR` tetap terpisah dari kode.
 
