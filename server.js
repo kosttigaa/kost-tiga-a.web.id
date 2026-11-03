@@ -442,7 +442,7 @@ const legacyAdminRoutes = new Map([
 function renderAdminPage({ title, content, showNavigation = true, showLogout = false }) {
   const links = adminLinks
     .map(([href, label], index) => `<a href="${href}"${index === 0 ? ' aria-current="page"' : ""}>${label}</a>`)
-    .join("") + (showLogout ? '<form method="post" action="/dashboard/logout"><button type="submit">Keluar</button></form>' : "");
+    .join("") + (showLogout ? '<form method="post" action="/dashboard"><input type="hidden" name="action" value="logout"><button type="submit">Keluar</button></form>' : "");
   return `<!doctype html>
 <html lang="id">
 <head>
@@ -632,6 +632,18 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       sendError(response, error.statusCode === 413 ? 413 : 400, error.statusCode === 413 ? "Payload Too Large" : "Bad Request");
       return;
     }
+    if (form.get("action") === "logout") {
+      const token = getAdminSession(request, sessions);
+      if (token) sessions.delete(token);
+      const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
+      response.writeHead(303, {
+        Location: "/dashboard",
+        "Cache-Control": "no-store",
+        "Set-Cookie": `${adminSessionCookie}=; Max-Age=0; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
+      });
+      response.end();
+      return;
+    }
     if (!matchesSecret(form.get("username"), auth.adminUser) || !matchesSecret(form.get("password"), auth.adminPassword)) {
       const body = renderAdminLoginPage("Username atau password salah.");
       response.writeHead(401, adminPageHeaders(body));
@@ -645,26 +657,6 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       Location: "/dashboard",
       "Cache-Control": "no-store",
       "Set-Cookie": `${adminSessionCookie}=${token}; Max-Age=${adminSessionMaxAge}; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
-    });
-    response.end();
-    return;
-  }
-  if (pathname === "/dashboard/logout") {
-    if (request.method !== "POST") {
-      sendError(response, 405, "Method Not Allowed", { Allow: "POST" });
-      return;
-    }
-    if (!isSameOriginRequest(request)) {
-      sendError(response, 403, "Forbidden");
-      return;
-    }
-    const token = getAdminSession(request, sessions);
-    if (token) sessions.delete(token);
-    const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
-    response.writeHead(303, {
-      Location: "/dashboard",
-      "Cache-Control": "no-store",
-      "Set-Cookie": `${adminSessionCookie}=; Max-Age=0; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
     });
     response.end();
     return;
@@ -1327,7 +1319,7 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
-    } else if (pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard/logout") {
+    } else if (pathname === "/dashboard" || pathname === "/dashboard/") {
       handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth, adminSessions);
     } else if (legacyAdminRoutes.has(pathname)) {
       if (!isAdmin(request, adminAuth, adminSessions)) {

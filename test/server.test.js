@@ -409,10 +409,11 @@ describe("static website server", () => {
       assert.ok(entries.some((entry) => entry.path === "/dashboard" && entry.status === 200));
       assert.ok((await readFile(path.join(logsDir, "access.jsonl"), "utf8")).includes("/dashboard"));
 
-      const logout = await fetch(`${origin}/dashboard/logout`, {
+      const logout = await fetch(`${origin}/dashboard`, {
         method: "POST",
         redirect: "manual",
-        headers: { Cookie: cookie, Origin: origin },
+        headers: { Cookie: cookie, Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ action: "logout" }),
       });
       assert.equal(logout.status, 303);
       assert.match(logout.headers.get("set-cookie"), /Max-Age=0/);
