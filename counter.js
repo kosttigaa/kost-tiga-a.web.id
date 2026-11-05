@@ -1,6 +1,6 @@
 (() => {
   const endpoint = "/api/visitors";
-  const storageKey = "kost-tiga-a-counted";
+  const storageKey = "kost-tiga-a-counted-v2";
 
   const brandName = document.querySelector(".site-header .brand-name");
   if (!brandName) {
