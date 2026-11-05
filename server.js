@@ -620,12 +620,12 @@ function dashboardCsp() {
 async function handleAdminDashboard(request, response, dataDir, accessLogs, auth, sessions) {
   const url = new URL(request.url, "http://localhost");
   const pathname = url.pathname;
+  let form;
   if (pathname === "/dashboard" && request.method === "POST" && auth.adminUser && auth.adminPassword) {
     if (!isSameOriginRequest(request)) {
       sendError(response, 403, "Forbidden");
       return;
     }
-    let form;
     try {
       form = new URLSearchParams(await readSmallBody(request));
     } catch (error) {
@@ -644,22 +644,24 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       response.end();
       return;
     }
-    if (!matchesSecret(form.get("username"), auth.adminUser) || !matchesSecret(form.get("password"), auth.adminPassword)) {
-      const body = renderAdminLoginPage("Username atau password salah.");
-      response.writeHead(401, adminPageHeaders(body));
-      response.end(body);
+    if (form.has("username") || form.has("password")) {
+      if (!matchesSecret(form.get("username"), auth.adminUser) || !matchesSecret(form.get("password"), auth.adminPassword)) {
+        const body = renderAdminLoginPage("Username atau password salah.");
+        response.writeHead(401, adminPageHeaders(body));
+        response.end(body);
+        return;
+      }
+      const token = randomBytes(32).toString("hex");
+      sessions.set(token, Date.now() + adminSessionMaxAge * 1000);
+      const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
+      response.writeHead(303, {
+        Location: "/dashboard",
+        "Cache-Control": "no-store",
+        "Set-Cookie": `${adminSessionCookie}=${token}; Max-Age=${adminSessionMaxAge}; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
+      });
+      response.end();
       return;
     }
-    const token = randomBytes(32).toString("hex");
-    sessions.set(token, Date.now() + adminSessionMaxAge * 1000);
-    const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
-    response.writeHead(303, {
-      Location: "/dashboard",
-      "Cache-Control": "no-store",
-      "Set-Cookie": `${adminSessionCookie}=${token}; Max-Age=${adminSessionMaxAge}; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
-    });
-    response.end();
-    return;
   }
   if (!isAdmin(request, auth, sessions)) {
     if ((request.method === "GET" || request.method === "HEAD") && pathname === "/dashboard" && url.searchParams.get("data") !== "logs" && auth.adminUser && auth.adminPassword) {
@@ -698,12 +700,13 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       sendError(response, 403, "Forbidden");
       return;
     }
-    let form;
-    try {
-      form = new URLSearchParams(await readSmallBody(request));
-    } catch (error) {
-      sendError(response, error.statusCode === 413 ? 413 : 400, error.statusCode === 413 ? "Payload Too Large" : "Bad Request");
-      return;
+    if (!form) {
+      try {
+        form = new URLSearchParams(await readSmallBody(request));
+      } catch (error) {
+        sendError(response, error.statusCode === 413 ? 413 : 400, error.statusCode === 413 ? "Payload Too Large" : "Bad Request");
+        return;
+      }
     }
     const counts = {};
     for (const target of clickTargets) {

@@ -392,6 +392,17 @@ describe("static website server", () => {
       assert.match(html, /Log akses/);
       assert.match(html, /<button type="submit">Keluar<\/button>/);
 
+      const roomUpdate = await fetch(`${origin}/dashboard`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { Cookie: cookie, Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ "alya-ac": "2", "alya-nonac": "0" }),
+      });
+      assert.equal(roomUpdate.status, 303);
+      assert.equal(roomUpdate.headers.get("location"), "/dashboard?saved=1#rooms");
+      const rooms = JSON.parse(await readFile(path.join(logsDir, "rooms.json"), "utf8"));
+      assert.deepEqual(rooms.alya, { ac: 2, nonac: 0 });
+
       const home = await fetch(origin, { headers: { "User-Agent": "TestBrowser/1.0" } });
       assert.equal(home.status, 200);
       await home.arrayBuffer();
