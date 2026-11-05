@@ -5,6 +5,11 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
+$sshKey = Join-Path $HOME '.ssh\kost-tiga-a-admin'
+if (-not (Test-Path $sshKey)) {
+  Write-Error "SSH key tidak ditemukan: $sshKey"
+}
+
 $dirty = git status --porcelain
 if ($dirty) {
   Write-Error "Ada perubahan yang belum di-commit. Commit atau batalkan dulu sebelum deploy."
@@ -34,20 +39,20 @@ git add -- *.html
 git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 
-$server = 'deployer@147.139.130.126'
+$server = 'admin@147.139.130.126'
 $remoteDir = '/var/www/kost-tiga-a.web.id'
 
 git push origin "HEAD:refs/heads/$branch"
 if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
 
 # cmd digunakan agar data tar mengalir sebagai biner tanpa diubah PowerShell
-cmd /c "git archive --format=tar HEAD | ssh $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
+cmd /c "git archive --format=tar HEAD | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
 if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke VPS gagal." }
 
-ssh $server "sudo -n /usr/bin/systemctl restart kost-tiga-a.service"
+ssh -i $sshKey -o IdentitiesOnly=yes $server "sudo -n /usr/bin/systemctl restart kost-tiga-a.service"
 if ($LASTEXITCODE -ne 0) { throw "Restart gagal. Pasang aturan sudoers NOPASSWD untuk kost-tiga-a.service." }
 
-ssh $server "systemctl is-active --quiet kost-tiga-a.service"
+ssh -i $sshKey -o IdentitiesOnly=yes $server "systemctl is-active --quiet kost-tiga-a.service"
 if ($LASTEXITCODE -ne 0) { throw "Service kost-tiga-a tidak aktif setelah restart." }
 
 Write-Output "Deploy selesai. Terakhir diperbarui: $label"

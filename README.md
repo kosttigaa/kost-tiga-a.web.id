@@ -71,13 +71,15 @@ Environment=ADMIN_PASSWORD=password-yang-sama-dengan-htpasswd
 
 Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; jangan menaruhnya di repository atau mengirimkannya lewat chat. Simpan konfigurasi, lalu jalankan `sudo systemctl daemon-reload`.
 
-Agar deploy oleh user `deployer` dapat me-restart service tanpa password, admin root perlu memasang aturan sudoers satu kali lewat `sudo visudo -f /etc/sudoers.d/kost-tiga-a-deployer`:
+Deploy memakai key SSH Ed25519 khusus di `~/.ssh/kost-tiga-a-admin` (tanpa passphrase agar skrip dapat berjalan tanpa prompt). Pasang isi file `~/.ssh/kost-tiga-a-admin.pub` ke `~admin/.ssh/authorized_keys` di VPS melalui akses admin/console. Jangan salin atau bagikan file private key `kost-tiga-a-admin`; lindungi file tersebut dengan izin akun Windows Anda.
+
+Agar deploy oleh user `admin` dapat me-restart service tanpa password, admin root perlu memasang aturan sudoers satu kali lewat `sudo visudo -f /etc/sudoers.d/kost-tiga-a-admin`:
 
 ```sudoers
-deployer ALL=(root) NOPASSWD: /usr/bin/systemctl restart kost-tiga-a.service
+admin ALL=(root) NOPASSWD: /usr/bin/systemctl restart kost-tiga-a.service
 ```
 
-Validasi dengan `sudo visudo -cf /etc/sudoers.d/kost-tiga-a-deployer`. Aturan ini hanya mengizinkan restart service tersebut. `deploy.ps1` menggunakan `sudo -n` agar gagal langsung dengan pesan yang jelas jika aturan belum dipasang, lalu memeriksa service kembali aktif.
+Validasi dengan `sudo visudo -cf /etc/sudoers.d/kost-tiga-a-admin`. Aturan ini hanya mengizinkan restart service tersebut. `deploy.ps1` menggunakan `sudo -n` agar gagal langsung dengan pesan yang jelas jika aturan belum dipasang, lalu memeriksa service kembali aktif.
 
 ```nginx
 location /dashboard {
