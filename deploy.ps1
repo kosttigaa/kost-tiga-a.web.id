@@ -49,10 +49,10 @@ if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
 cmd /c "git archive --format=tar HEAD | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
 if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke VPS gagal." }
 
-ssh -i $sshKey -o IdentitiesOnly=yes $server "sudo -n /usr/bin/systemctl restart kost-tiga-a.service"
-if ($LASTEXITCODE -ne 0) { throw "Restart gagal. Pasang aturan sudoers NOPASSWD untuk kost-tiga-a.service." }
+ssh -i $sshKey -o IdentitiesOnly=yes $server "pm2 restart kost-tiga-a"
+if ($LASTEXITCODE -ne 0) { throw "Restart PM2 kost-tiga-a gagal." }
 
-ssh -i $sshKey -o IdentitiesOnly=yes $server "systemctl is-active --quiet kost-tiga-a.service"
-if ($LASTEXITCODE -ne 0) { throw "Service kost-tiga-a tidak aktif setelah restart." }
+ssh -i $sshKey -o IdentitiesOnly=yes $server "sleep 2; curl -fsS -o /dev/null http://127.0.0.1:3000/"
+if ($LASTEXITCODE -ne 0) { throw "Aplikasi kost-tiga-a tidak merespons setelah restart." }
 
 Write-Output "Deploy selesai. Terakhir diperbarui: $label"
