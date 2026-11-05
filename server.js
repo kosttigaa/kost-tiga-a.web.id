@@ -372,11 +372,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;mi
 .private-label{color:var(--muted);font-size:12px;font-weight:700}
 main{width:min(1120px,calc(100% - 40px));margin:48px auto}
 nav.admin-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
-nav.admin-nav a{padding:8px 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}
+nav.admin-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}
 nav.admin-nav a:hover{border-color:var(--blue);color:var(--blue)}
 nav.admin-nav a[aria-current=page]{border-color:var(--ink);background:var(--ink);color:#fff}
 nav.admin-nav form{margin-left:auto}
-nav.admin-nav button{width:auto;min-height:36px;padding:0 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+nav.admin-nav button{width:auto;min-height:40px;padding:0 14px;border:1px solid #d7cfe5;border-radius:6px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
 nav.admin-nav button:hover{border-color:var(--blue);color:var(--blue)}
 .eyebrow{margin:0 0 8px;color:var(--blue);font-size:12px;font-weight:700;text-transform:uppercase}
 h1{margin:0;font-family:Manrope,sans-serif;font-size:clamp(26px,4vw,34px);line-height:1.15}
@@ -403,7 +403,8 @@ form{margin:0}
 .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
 .table-wrap table{min-width:650px}
 .toolbar{display:flex;gap:12px;margin-bottom:12px}
-.toolbar input{min-height:42px;font-size:14px}
+.toolbar input{flex:1;min-width:0;min-height:44px;font-size:16px}
+.toolbar button{width:auto;flex:none;padding-inline:24px}
 .pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px}
 .pagination button{width:auto;min-height:38px}
 .pagination button:disabled{background:#d8d3e1;color:#6d667d;cursor:not-allowed}
@@ -424,7 +425,30 @@ input{width:100%;min-height:46px;padding:0 13px;border:1px solid #d7cfe5;border-
 input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #9b87f0;outline-offset:2px}
 button{width:100%;min-height:46px;padding:0 16px;border:0;border-radius:6px;background:var(--ink);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 button:hover{background:var(--blue)}
-@media (max-width:600px){header{min-height:60px;padding-inline:16px}main{width:calc(100% - 28px);margin:32px auto}.toolbar{flex-direction:column}.dashboard-section{padding:18px 0}}
+@media (max-width:700px){
+header{min-height:60px;padding-inline:max(16px,env(safe-area-inset-left))}
+main{width:calc(100% - 28px);margin:24px auto;padding-bottom:env(safe-area-inset-bottom)}
+.toolbar{flex-direction:column}
+.toolbar button{width:100%}
+.dashboard-section{padding:18px 0}
+nav.admin-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+nav.admin-nav a,nav.admin-nav button{min-height:44px;padding:0 8px}
+nav.admin-nav form{grid-column:1/-1;margin:0}
+nav.admin-nav button{width:100%}
+.table-wrap{overflow:visible;border:0;background:none}
+.table-wrap table{min-width:0}
+#logs thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#logs table,#logs tbody{display:block}
+#entries tr{display:block;margin-bottom:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+#entries td{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:4px 0;border:0;overflow-wrap:anywhere}
+#entries td::before{content:attr(data-label);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+#entries td.empty{display:block;padding:28px 14px;text-align:center}
+#entries td.empty::before{content:none}
+#entries td.path,#entries td.browser{min-width:0}
+.pagination{display:grid;grid-template-columns:1fr 1fr}
+.pagination button{width:100%;min-height:44px}
+#page-info{grid-column:1/-1;order:-1;min-width:0}
+}
 `;
 
 const adminLinks = [
@@ -447,7 +471,7 @@ function renderAdminPage({ title, content, showNavigation = true, showLogout = f
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <title>${title} | Kost Tiga A</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -587,7 +611,7 @@ function renderLogsSection() {
   return `<section id="logs" class="dashboard-section" aria-labelledby="logs-title">
 <p class="eyebrow">Administrasi situs</p><h1 id="logs-title">Log akses</h1>
 <p class="intro" id="status" aria-live="polite">Memuat log...</p>
-<div class="toolbar"><input id="search" type="search" aria-label="Cari log" placeholder="Cari IP, halaman, browser, metode, atau status"><button id="refresh" type="button">Muat ulang</button></div>
+<div class="toolbar"><input id="search" type="search" aria-label="Cari log" placeholder="Cari IP, halaman, browser, atau status"><button id="refresh" type="button">Muat ulang</button></div>
 <div class="table-wrap"><table>
 <thead><tr><th scope="col">IP</th><th scope="col">Waktu WIB</th><th scope="col">Halaman</th><th scope="col">Browser</th><th scope="col">Metode</th><th scope="col">Status</th></tr></thead>
 <tbody id="entries"><tr><td class="empty" colspan="6">Memuat log...</td></tr></tbody>
@@ -598,7 +622,7 @@ function renderLogsSection() {
 
 const dashboardScript = `const pageSize=50,statusElement=document.getElementById("status"),entriesElement=document.getElementById("entries"),searchElement=document.getElementById("search"),previousPageButton=document.getElementById("previous-page"),nextPageButton=document.getElementById("next-page"),pageInfoElement=document.getElementById("page-info");let entries=[],currentPage=1;
 function getBrowser(userAgent){const browsers=[["Edge",/Edg(?:e|A|iOS)?\\/([\\d.]+)/],["Opera",/(?:OPR|Opera)\\/([\\d.]+)/],["Samsung Internet",/SamsungBrowser\\/([\\d.]+)/],["Firefox",/(?:Firefox|FxiOS)\\/([\\d.]+)/],["Chrome",/(?:Chrome|CriOS)\\/([\\d.]+)/],["Safari",/Version\\/([\\d.]+).*Safari/]];for(const [name,pattern] of browsers){const match=userAgent.match(pattern);if(match)return name+" "+match[1]}return "Tidak diketahui"}
-function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className] of [[entry.ip,"ip"],[time,"time"],[entry.path,"path"],[getBrowser(entry.userAgent),"browser"],[entry.method,""],[String(entry.status),"status-code"]]){const cell=document.createElement("td");cell.className=className;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
+function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className,label] of [[entry.ip,"ip","IP"],[time,"time","Waktu WIB"],[entry.path,"path","Halaman"],[getBrowser(entry.userAgent),"browser","Browser"],[entry.method,"","Metode"],[String(entry.status),"status-code","Status"]]){const cell=document.createElement("td");cell.className=className;cell.dataset.label=label;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
 async function loadLog(){statusElement.textContent="Memuat log...";try{const response=await fetch("/dashboard?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
 const sections=[...document.querySelectorAll(".dashboard-section")],tabs=[...document.querySelectorAll(".admin-nav a")];function activateSection(id){const active=sections.some(section=>section.id===id)?id:"logs";for(const section of sections)section.hidden=section.id!==active;for(const tab of tabs){if(tab.hash==="#"+active)tab.setAttribute("aria-current","page");else tab.removeAttribute("aria-current")}}for(const tab of tabs)tab.addEventListener("click",event=>{event.preventDefault();const id=tab.hash.slice(1);if(location.hash!=="#"+id)history.pushState(null,"","#"+id);activateSection(id)});addEventListener("hashchange",()=>activateSection(location.hash.slice(1)));activateSection(location.hash.slice(1)||"logs");
 document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});loadLog();`;

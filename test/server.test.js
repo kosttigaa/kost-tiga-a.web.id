@@ -341,6 +341,9 @@ describe("static website server", () => {
       assert.match(html, /id="logs"/);
       assert.match(html, /id="stats"[^>]* hidden/);
       assert.match(html, /id="rooms"[^>]* hidden/);
+      assert.match(html, /viewport-fit=cover/);
+      assert.match(html, /@media \(max-width:700px\)/);
+      assert.match(html, /cell\.dataset\.label=label/);
       assert.match(ok.headers.get("content-security-policy"), /font-src https:\/\/fonts\.gstatic\.com/);
       assert.ok(!html.includes("<b>x</b>"));
       assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 403);
