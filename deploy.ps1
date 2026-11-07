@@ -40,8 +40,8 @@ git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copi
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 
 $servers = @(
-  @{ Name = 'VPS Utama'; Host = 'admin@162.35.171.78' },
-  @{ Name = 'VPS Standby'; Host = 'admin@147.139.130.126' }
+  @{ Name = 'VPS Utama'; Host = 'admin@147.139.130.126' },
+  @{ Name = 'VPS Standby'; Host = 'admin@162.35.171.78' }
 )
 $remoteDir = '/var/www/kost-tiga-a.web.id'
 
