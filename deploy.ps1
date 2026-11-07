@@ -39,20 +39,29 @@ git add -- *.html
 git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 
-$server = 'admin@147.139.130.126'
+$servers = @(
+  @{ Name = 'VPS Utama'; Host = 'admin@162.35.171.78' },
+  @{ Name = 'VPS Standby'; Host = 'admin@147.139.130.126' }
+)
 $remoteDir = '/var/www/kost-tiga-a.web.id'
 
 git push origin "HEAD:refs/heads/$branch"
 if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
 
-# cmd digunakan agar data tar mengalir sebagai biner tanpa diubah PowerShell
-cmd /c "git archive --format=tar HEAD | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $server tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
-if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke VPS gagal." }
+foreach ($srv in $servers) {
+  $target = $srv.Host
+  $srvName = $srv.Name
+  Write-Output "[$srvName] Mengirim file ke $target..."
+  cmd /c "git archive --format=tar HEAD | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $target tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
+  if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke $srvName gagal." }
 
-ssh -i $sshKey -o IdentitiesOnly=yes $server "pm2 restart kost-tiga-a"
-if ($LASTEXITCODE -ne 0) { throw "Restart PM2 kost-tiga-a gagal." }
+  Write-Output "[$srvName] Merestart PM2..."
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "pm2 restart kost-tiga-a"
+  if ($LASTEXITCODE -ne 0) { throw "Restart PM2 di $srvName gagal." }
 
-ssh -i $sshKey -o IdentitiesOnly=yes $server "sleep 2; curl -fsS -o /dev/null http://127.0.0.1:3000/"
-if ($LASTEXITCODE -ne 0) { throw "Aplikasi kost-tiga-a tidak merespons setelah restart." }
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "sleep 2; curl -fsS -o /dev/null http://127.0.0.1:3000/"
+  if ($LASTEXITCODE -ne 0) { throw "Aplikasi kost-tiga-a tidak merespons di $srvName." }
+  Write-Output "[$srvName] Berhasil diperbarui dan aktif."
+}
 
-Write-Output "Deploy selesai. Terakhir diperbarui: $label"
+Write-Output "Deploy selesai ke semua server. Terakhir diperbarui: $label"
