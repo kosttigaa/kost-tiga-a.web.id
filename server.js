@@ -316,7 +316,7 @@ async function handleRooms(request, response, dataDir) {
 }
 
 const dayFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" });
-const targetNames = { athaya: "Kost Athaya", alya: "Kost Putri: Alya" };
+const targetNames = { athaya: "Kost Putri: Athaya", alya: "Kost Putri: Alya" };
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
