@@ -4,7 +4,7 @@ Website ini menggunakan HTML, CSS, dan JavaScript di sisi browser, dengan server
 
 ## Menjalankan secara lokal
 
-Pastikan Node.js 18 atau yang lebih baru sudah terpasang, lalu jalankan:
+Pastikan Node.js 22 atau yang lebih baru sudah terpasang, lalu jalankan:
 
 ```sh
 npm start
