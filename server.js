@@ -368,7 +368,7 @@ const adminStyles = `
 body{margin:0;min-height:100vh;color:var(--ink);background:radial-gradient(ellipse at 8% 0,rgb(114 85 232/10%),transparent 30rem),var(--paper)}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding:0 max(24px,calc((100% - 1120px)/2));border-bottom:1px solid var(--line);background:rgb(255 255 255/80%)}
 .brand{display:inline-flex;align-items:center;gap:11px;color:inherit;text-decoration:none;font-family:Manrope,sans-serif;font-weight:800}
-.mark{display:grid;width:36px;aspect-ratio:1;place-items:center;border:2px solid var(--ink);border-radius:12px;background:var(--acid);font-size:12px;transform:rotate(-5deg)}
+.mark{display:grid;width:36px;aspect-ratio:1;place-items:center;border:2px solid #354239;border-radius:12px;background:#d7d6a1;color:#354239;font-size:12px;font-weight:800;transform:rotate(-5deg)}
 .private-label{color:var(--muted);font-size:12px;font-weight:700}
 main{width:min(1120px,calc(100% - 40px));margin:48px auto}
 nav.admin-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
@@ -474,6 +474,9 @@ function renderAdminPage({ title, content, showNavigation = true, showLogout = f
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <title>${title} | Kost Tiga A</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">

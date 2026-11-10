@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 56" width="220" height="56">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@800&amp;display=swap');
+      .badge { fill: #d7d6a1; }
+      .text-3a {
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 800;
+        font-size: 21px;
+        fill: #354239;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .brand-title {
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: -0.01em;
+        fill: currentColor;
+        dominant-baseline: central;
+      }
+    </style>
+  </defs>
+  <g transform="translate(6, 6)">
+    <g transform="rotate(-5 22 22)">
+      <rect class="badge" x="0" y="0" width="44" height="44" rx="14"/>
+      <text class="text-3a" x="22" y="23">3A</text>
+    </g>
+    <text class="brand-title" x="56" y="23">Kost Tiga A</text>
+  </g>
+</svg>
