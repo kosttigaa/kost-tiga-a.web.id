@@ -589,10 +589,74 @@ function adminPageHeaders(body) {
 }
 
 function renderAdminLoginPage(message = "") {
-  const content = `<p class="eyebrow">Administrasi situs</p><h1>Masuk ke dashboard</h1>
-<p class="intro">Gunakan akun admin untuk melanjutkan.</p>${message ? '<p class="ok" role="alert">' + message + "</p>" : ""}
-<form method="post" action="/dashboard" class="panel"><div class="box"><label>Username<input name="username" autocomplete="username" required></label><label>Password<input type="password" name="password" autocomplete="current-password" required></label></div><button type="submit">Masuk</button></form>`;
-  return renderAdminPage({ title: "Masuk", content, showNavigation: false });
+  return `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Kost Tiga A | Panel Pengelola</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Manrope:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-paper:#f6f3eb;--color-white:#fffdf8;--color-ink:#242d29;--color-muted:#6d716a;--color-line:#e8e1d1;--color-blue-dark:#354c3f;--color-night:#1f3028;--color-acid:#d7d6a1;--color-border-acid:#bca878}
+*{box-sizing:border-box}
+html,body{min-height:100vh;margin:0;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--color-ink);background:radial-gradient(ellipse at 14% 8%,rgb(82 107 91 / 7%),transparent 30rem),radial-gradient(ellipse at 88% 42%,rgb(216 195 145 / 10%),transparent 32rem),var(--color-paper);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.login-card{width:100%;max-width:384px;background:#fff;border-radius:24px;box-shadow:0 16px 40px rgba(36,45,41,0.08);border:1px solid var(--color-line);padding:32px}
+.login-header{text-align:center;margin-bottom:24px}
+.login-badge{display:inline-flex;width:56px;height:56px;align-items:center;justify-content:center;border-radius:16px;border:1px solid var(--color-border-acid);background:var(--color-acid);font-family:Manrope,sans-serif;font-size:20px;font-weight:800;color:var(--color-night);box-shadow:0 1px 2px rgba(0,0,0,0.05);margin-bottom:12px;transform:rotate(-3deg);transition:transform .2s ease}
+.login-badge:hover{transform:rotate(0)}
+.login-title{margin:0;font-family:Manrope,sans-serif;font-size:24px;font-weight:900;color:var(--color-ink);letter-spacing:-.025em}
+.login-subtitle{margin:4px 0 0;font-size:12px;color:var(--color-muted)}
+form.login-form{display:flex;flex-direction:column;gap:16px}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-label{font-size:12px;font-weight:600;color:#515651}
+.input-wrapper{position:relative;display:flex;align-items:center}
+.input-icon{position:absolute;left:12px;width:16px;height:16px;color:#9c978b;pointer-events:none}
+.login-input{width:100%;min-height:42px;padding:9px 12px 9px 36px;font-family:inherit;font-size:14px;border:1px solid var(--color-line);border-radius:12px;background:#fff;color:var(--color-ink);transition:border-color .15s ease}
+.login-input:focus{outline:none;border-color:var(--color-blue-dark)}
+.login-error{margin:0;padding:10px 12px;border-radius:8px;background:#fdf5f2;border:1px solid #f8e5de;color:#b97862;font-size:12px;font-weight:500}
+.login-btn{width:100%;min-height:42px;padding:10px;border:0;border-radius:12px;background:var(--color-blue-dark);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:background .15s ease}
+.login-btn:hover{background:var(--color-night)}
+.login-footer{margin:24px 0 0;text-align:center;font-size:11px;color:#9c978b}
+</style>
+</head>
+<body>
+<div class="login-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-badge">3A</div>
+      <h1 class="login-title">Kost Tiga A</h1>
+      <p class="login-subtitle">Masuk ke Panel Pengelola Kost</p>
+    </div>
+    <form method="post" action="/dashboard" class="login-form">
+      <div class="field-group">
+        <label for="username" class="field-label">Username</label>
+        <div class="input-wrapper">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <input id="username" required autofocus name="username" autocomplete="username" placeholder="admin / penjaga" autocapitalize="none" autocorrect="off" class="login-input">
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="password" class="field-label">Kata Sandi</label>
+        <div class="input-wrapper">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input id="password" required type="password" name="password" autocomplete="current-password" placeholder="••••••••" class="login-input">
+        </div>
+      </div>
+      ${message ? `<p class="login-error" role="alert">${message}</p>` : ""}
+      <button type="submit" class="login-btn">Masuk Dashboard</button>
+    </form>
+    <p class="login-footer">Panel Pengelola Kost Tiga A</p>
+  </div>
+</div>
+</body>
+</html>`;
 }
 
 function rejectAdmin(response, auth) {
