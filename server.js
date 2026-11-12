@@ -923,7 +923,7 @@ form.login-form{display:flex;flex-direction:column;gap:16px}
       ${message ? `<p class="login-error" role="alert">${message}</p>` : ""}
       <button type="submit" class="login-btn">Masuk Dashboard</button>
     </form>
-    <p class="login-footer">Panel Pengelola Kost Tiga A</p>
+    <p class="login-footer">Panel Pengelola Kost Tiga A<br>Terakhir diperbarui: <time datetime="2026-11-13T00:14:27+07:00">13 November 2026, 00:14:27 WIB</time></p>
   </div>
 </div>
 </body>
@@ -2294,7 +2294,7 @@ function stampUpdated(html, date) {
   const { iso, label } = formatUpdatedTime(date);
   return html.replace(
     /Terakhir diperbarui: <time datetime="[^"]*">[^<]*<\/time>/,
-    () => `Terakhir diperbarui: <time datetime="2026-11-13T00:14:27+07:00">13 November 2026, 00:14:27 WIB</time>`,
+    () => "Terakhir diperbarui: " + `<time datetime="${iso}">${label}</time>`,
   );
 }
 
