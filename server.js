@@ -668,16 +668,21 @@ button:hover{background:var(--night)}
 .wa-link:hover{text-decoration:underline}
 @media (max-width:700px){
 header{min-height:56px;padding-inline:max(16px,env(safe-area-inset-left))}
-main{width:calc(100% - 28px);margin:20px auto;padding-bottom:env(safe-area-inset-bottom)}
+main{width:calc(100% - 24px);margin:16px auto;padding-bottom:env(safe-area-inset-bottom)}
 .toolbar{flex-direction:column}
 .toolbar button{width:100%}
 .dashboard-section{padding:18px 0}
+.box{grid-template-columns:1fr}
 nav.admin-nav{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 nav.admin-nav a,nav.admin-nav button{min-height:42px;padding:0 8px;font-size:12px}
 nav.admin-nav form{grid-column:1/-1;margin:0}
 nav.admin-nav button{width:100%}
-.table-wrap{overflow:visible;border:0;background:none;box-shadow:none}
-.table-wrap table{min-width:0}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#registrations .table-wrap table{min-width:780px}
+#registrations .toolbar{flex-direction:column}
+#registrations .ktp-btn{padding:6px 12px;font-size:11px}
+#logs .table-wrap{overflow:visible;border:0;background:none;box-shadow:none}
+#logs .table-wrap table{min-width:0}
 #logs thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #logs table,#logs tbody{display:block}
 #entries tr{display:block;margin-bottom:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(36,45,41,0.04)}
@@ -889,12 +894,18 @@ form.login-form{display:flex;flex-direction:column;gap:16px}
 .field-label{font-size:12px;font-weight:600;color:#515651}
 .input-wrapper{position:relative;display:flex;align-items:center}
 .input-icon{position:absolute;left:12px;width:16px;height:16px;color:#9c978b;pointer-events:none}
-.login-input{width:100%;min-height:42px;padding:9px 12px 9px 36px;font-family:inherit;font-size:14px;border:1px solid var(--color-line);border-radius:12px;background:#fff;color:var(--color-ink);transition:border-color .15s ease}
+.login-input{width:100%;min-height:42px;padding:9px 12px 9px 36px;font-family:inherit;font-size:16px;border:1px solid var(--color-line);border-radius:12px;background:#fff;color:var(--color-ink);transition:border-color .15s ease}
 .login-input:focus{outline:none;border-color:var(--color-blue-dark)}
 .login-error{margin:0;padding:10px 12px;border-radius:8px;background:#fdf5f2;border:1px solid #f8e5de;color:#b97862;font-size:12px;font-weight:500}
 .login-btn{width:100%;min-height:42px;padding:10px;border:0;border-radius:12px;background:var(--color-blue-dark);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:background .15s ease}
 .login-btn:hover{background:var(--color-night)}
-.login-footer{margin:24px 0 0;text-align:center;font-size:11px;color:#9c978b}
+.login-footer{margin:24px 0 0;text-align:center;font-size:11px;color:#9c978b;line-height:1.6}
+@media (max-width:480px){
+  .login-screen{padding:16px 12px}
+  .login-card{padding:26px 18px;border-radius:20px}
+  .login-title{font-size:22px}
+  .login-subtitle{font-size:11px}
+}
 </style>
 </head>
 <body>
@@ -1561,7 +1572,7 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
 .success-title{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:24px;font-weight:900;color:var(--ink)}
 .success-desc{margin:0 0 24px;color:var(--muted);font-size:14px;line-height:1.6}
 .summary-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 20px;text-align:left;margin-bottom:28px}
-.summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+.summary-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
 .summary-row:last-child{border-bottom:0}
 .summary-label{color:var(--muted)}
 .summary-val{font-weight:700;color:var(--ink);text-align:right}
@@ -1573,7 +1584,18 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
 .wa-confirm-btn svg{width:22px;height:22px;fill:currentColor}
 .back-link{display:inline-block;margin-top:16px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
 .back-link:hover{color:var(--ink);text-decoration:underline}
-@media (max-width:600px){.choice-grid{grid-template-columns:1fr}.form-card{padding:20px 16px;border-radius:16px}.success-screen{padding:32px 18px}}
+@media (max-width:600px){
+  header{padding:0 max(16px,env(safe-area-inset-left))}
+  main{width:min(680px,calc(100% - 24px));margin:20px auto 60px}
+  .choice-grid{grid-template-columns:1fr}
+  .choice-box{padding:14px 12px}
+  .form-card{padding:20px 14px;border-radius:16px}
+  .form-input,.form-textarea{font-size:16px}
+  .rules-card{padding:14px 12px}
+  .rules-content{max-height:240px;-webkit-overflow-scrolling:touch}
+  .success-screen{padding:28px 16px;border-radius:16px}
+  .summary-box{padding:14px 12px}
+}
 </style>
 </head>
 <body>

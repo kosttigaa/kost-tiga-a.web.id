@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Poster A4 Estetik Gen Z - Kost Tiga A</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="alternate icon" href="favicon.ico">
@@ -34,6 +35,19 @@
       overflow: hidden;
       box-sizing: border-box;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+        overflow-x: auto;
+      }
+      .poster-a4 {
+        width: 100%;
+        min-width: 320px;
+        height: auto;
+        min-height: 297mm;
+        margin-bottom: 20px;
+      }
     }
     @media print {
       body {
