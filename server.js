@@ -361,6 +361,64 @@ async function readOptional(file) {
     throw error;
   }
 }
+function readBody(request, maxBytes = 2 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        request.destroy();
+        reject(Object.assign(new Error("Payload too large"), { statusCode: 413 }));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    request.on("error", reject);
+  });
+}
+
+async function readRegistrations(dataDir) {
+  try {
+    const raw = await readFile(path.join(dataDir, "registrations.jsonl"), "utf8");
+    const list = [];
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        list.push(JSON.parse(trimmed));
+      } catch {}
+    }
+    return list.reverse();
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+let regWriteQueue = Promise.resolve();
+
+async function saveRegistration(dataDir, entry) {
+  const task = regWriteQueue.then(async () => {
+    await mkdir(dataDir, { recursive: true });
+    await appendFile(path.join(dataDir, "registrations.jsonl"), JSON.stringify(entry) + "\n", "utf8");
+  });
+  regWriteQueue = task.catch(() => {});
+  return task;
+}
+
+async function saveKtpImage(dataDir, id, base64Data) {
+  const uploadsDir = path.join(dataDir, "uploads");
+  await mkdir(uploadsDir, { recursive: true });
+  const cleaned = base64Data.replace(/^data:image\/[a-zA-Z0-9.+_-]+;base64,/, "");
+  const buffer = Buffer.from(cleaned, "base64");
+  const filename = `${id}-ktp.jpg`;
+  const filePath = path.join(uploadsDir, filename);
+  await writeFile(filePath, buffer);
+  return filename;
+}
+
 
 const adminStyles = `
 :root{color-scheme:light;--paper:#f6f3eb;--ink:#242d29;--muted:#6d716a;--line:#e8e1d1;--blue:#526b5b;--blue-dark:#354c3f;--night:#1f3028;--acid:#d7d6a1;--border-acid:#bca878;--cream:#eeeadf;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
@@ -431,13 +489,17 @@ input:focus{outline:none;border-color:var(--blue-dark);box-shadow:0 0 0 3px rgba
 input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--blue-dark);outline-offset:2px}
 button{width:100%;min-height:42px;padding:0 16px;border:0;border-radius:10px;background:var(--blue-dark);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:background .15s ease}
 button:hover{background:var(--night)}
+.ktp-btn{display:inline-flex;align-items:center;padding:4px 10px;border-radius:6px;background:var(--cream);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:12px;font-weight:700;transition:all .15s}
+.ktp-btn:hover{background:#d8cba9}
+.wa-link{color:#15803d;text-decoration:none;font-weight:700}
+.wa-link:hover{text-decoration:underline}
 @media (max-width:700px){
 header{min-height:56px;padding-inline:max(16px,env(safe-area-inset-left))}
 main{width:calc(100% - 28px);margin:20px auto;padding-bottom:env(safe-area-inset-bottom)}
 .toolbar{flex-direction:column}
 .toolbar button{width:100%}
 .dashboard-section{padding:18px 0}
-nav.admin-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+nav.admin-nav{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 nav.admin-nav a,nav.admin-nav button{min-height:42px;padding:0 8px;font-size:12px}
 nav.admin-nav form{grid-column:1/-1;margin:0}
 nav.admin-nav button{width:100%}
@@ -461,6 +523,7 @@ const adminLinks = [
   ["/admin#logs", "Log akses"],
   ["/admin#stats", "Statistik"],
   ["/admin#rooms", "Kamar kosong"],
+  ["/admin#registrations", "Pendaftaran"],
 ];
 const legacyAdminRoutes = new Map([
   ["/admin/logs", "/admin#logs"],
@@ -474,6 +537,7 @@ function renderAdminPage({ title, content, showNavigation = true, showLogout = f
     [basePath + "#logs", "Log akses"],
     [basePath + "#stats", "Statistik"],
     [basePath + "#rooms", "Kamar kosong"],
+    [basePath + "#registrations", "Pendaftaran"],
   ]
     .map(([href, label], index) => `<a href="${href}"${index === 0 ? ' aria-current="page"' : ""}>${label}</a>`)
     .join("") + (showLogout ? `<form method="post" action="${basePath}"><input type="hidden" name="action" value="logout"><button type="submit">Keluar</button></form>` : "");
@@ -723,7 +787,7 @@ function getBrowser(userAgent){const browsers=[["Edge",/Edg(?:e|A|iOS)?\\/([\\d.
 function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className,label] of [[entry.ip,"ip","IP"],[time,"time","Waktu WIB"],[entry.path,"path","Halaman"],[getBrowser(entry.userAgent),"browser","Browser"],[entry.method,"","Metode"],[String(entry.status),"status-code","Status"]]){const cell=document.createElement("td");cell.className=className;cell.dataset.label=label;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
 async function loadLog(){statusElement.textContent="Memuat log...";try{const base=location.pathname.startsWith("/dashboard")?"/dashboard":"/admin";const response=await fetch(base+"?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
 const sections=[...document.querySelectorAll(".dashboard-section")],tabs=[...document.querySelectorAll(".admin-nav a")];function activateSection(id){const active=sections.some(section=>section.id===id)?id:"logs";for(const section of sections)section.hidden=section.id!==active;for(const tab of tabs){if(tab.hash==="#"+active)tab.setAttribute("aria-current","page");else tab.removeAttribute("aria-current")}}for(const tab of tabs)tab.addEventListener("click",event=>{event.preventDefault();const id=tab.hash.slice(1);if(location.hash!=="#"+id)history.pushState(null,"","#"+id);activateSection(id)});addEventListener("hashchange",()=>activateSection(location.hash.slice(1)));activateSection(location.hash.slice(1)||"logs");
-document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});loadLog();`;
+document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});const regSearch=document.getElementById("reg-search");if(regSearch){regSearch.addEventListener("input",()=>{const q=regSearch.value.trim().toLowerCase();for(const tr of document.querySelectorAll("#reg-entries tr")){tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"}})}loadLog();`;
 
 function dashboardCsp() {
   const hash = createHash("sha256").update(dashboardScript).digest("base64");
@@ -732,6 +796,7 @@ function dashboardCsp() {
     "script-src 'sha256-" + hash + "'",
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
     "font-src https://fonts.gstatic.com",
+    "img-src 'self' data:",
     "connect-src 'self'",
     "form-action 'self'",
     "base-uri 'none'",
@@ -799,6 +864,50 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
     return;
   }
 
+  if (isAdminPath && url.searchParams.get("data") === "registrations_csv") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+      return;
+    }
+    const registrations = await readRegistrations(dataDir);
+    const headers = [
+      "Waktu",
+      "Pilihan Kost",
+      "Nama Lengkap",
+      "NIK",
+      "Alamat Asal",
+      "No WA Penghuni",
+      "Nama Orang Tua / Wali",
+      "No WA Orang Tua / Wali",
+      "Kendaraan",
+      "Foto KTP",
+      "Persetujuan Tata Tertib",
+    ];
+    const escapeCsv = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+    const rows = registrations.map((r) => [
+      new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "short", timeStyle: "medium" }).format(new Date(r.timestamp)) + " WIB",
+      r.kost,
+      r.fullName,
+      `'${r.nik}`,
+      r.address,
+      `'${r.phone}`,
+      r.guardianName,
+      `'${r.guardianPhone}`,
+      r.vehicle || "-",
+      r.ktpImage ? `${basePath}/uploads/${r.ktpImage}` : "-",
+      r.agreement,
+    ]);
+    const csvData = "\uFEFF" + [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    response.writeHead(200, {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="pendaftaran-penghuni-${dateStr}.csv"`,
+    });
+    response.end(request.method === "HEAD" ? undefined : csvData);
+    return;
+  }
+
   if (isAdminPath && url.searchParams.get("data") === "logs") {
     if (request.method !== "GET") {
       sendError(response, 405, "Method Not Allowed", { Allow: "GET" });
@@ -857,10 +966,11 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
     return;
   }
   const now = new Date();
-  const [clickText, visitorText, rooms] = await Promise.all([
+  const [clickText, visitorText, rooms, registrations] = await Promise.all([
     readOptional(path.join(dataDir, "clicks.jsonl")),
     readOptional(path.join(dataDir, "visitors.json")),
     readRooms(dataDir),
+    readRegistrations(dataDir),
   ]);
   let visitors = 0;
   try {
@@ -872,6 +982,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
 ${renderLogsSection()}
 ${renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now })}
 <section id="rooms" class="dashboard-section" aria-labelledby="rooms-title" hidden><p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1><p class="intro">Atur jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe. ${rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur."}</p>${renderRoomsForm(rooms, notice, basePath)}</section>
+${renderRegistrationsSection(registrations, basePath)}
 <script>${dashboardScript}</script>`;
   const body = renderAdminPage({ title: "Dashboard", content, showLogout: Boolean(getAdminSession(request, sessions)), basePath });
   response.writeHead(200, adminPageHeaders(body));
@@ -903,6 +1014,77 @@ async function saveRooms(dataDir, counts) {
   return task;
 }
 
+
+function renderRegistrationsSection(registrations, basePath = "/admin") {
+  const rows = registrations.length
+    ? registrations
+        .map((r) => {
+          const time =
+            new Intl.DateTimeFormat("id-ID", {
+              timeZone: "Asia/Jakarta",
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(new Date(r.timestamp)) + " WIB";
+          const ktpLink = r.ktpImage
+            ? `<a href="${basePath}/uploads/${encodeURIComponent(r.ktpImage)}" target="_blank" rel="noopener noreferrer" class="ktp-btn">Lihat KTP</a>`
+            : "-";
+          const cleanWa = String(r.phone || "").replace(/\D/g, "");
+          const waPhone = cleanWa.startsWith("0") ? "62" + cleanWa.slice(1) : cleanWa;
+          const waLink = cleanWa
+            ? `<a href="https://wa.me/${waPhone}" target="_blank" rel="noopener noreferrer" class="wa-link">${escapeHtml(r.phone)}</a>`
+            : escapeHtml(r.phone);
+          const cleanWaliWa = String(r.guardianPhone || "").replace(/\D/g, "");
+          const waliWaPhone = cleanWaliWa.startsWith("0") ? "62" + cleanWaliWa.slice(1) : cleanWaliWa;
+          const waliWaLink = cleanWaliWa
+            ? `<a href="https://wa.me/${waliWaPhone}" target="_blank" rel="noopener noreferrer" class="wa-link">${escapeHtml(r.guardianPhone)}</a>`
+            : escapeHtml(r.guardianPhone);
+
+          return `<tr>
+<td class="time">${escapeHtml(time)}</td>
+<td><strong>${escapeHtml(r.kost)}</strong></td>
+<td>${escapeHtml(r.fullName)}</td>
+<td><code>${escapeHtml(r.nik)}</code></td>
+<td>${waLink}</td>
+<td>${escapeHtml(r.guardianName)}<br><small class="muted">${waliWaLink}</small></td>
+<td>${escapeHtml(r.address)}</td>
+<td>${escapeHtml(r.vehicle || "-")}</td>
+<td>${ktpLink}</td>
+</tr>`;
+        })
+        .join("")
+    : `<tr><td class="empty" colspan="9">Belum ada data pendaftaran penghuni.</td></tr>`;
+
+  return `<section id="registrations" class="dashboard-section" aria-labelledby="reg-title" hidden>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px">
+  <div>
+    <p class="eyebrow">Administrasi situs</p>
+    <h1 id="reg-title">Pendaftaran Penghuni</h1>
+    <p class="intro" style="margin-bottom:0">Data calon penghuni yang telah mengisi formulir pendaftaran (${registrations.length} pendaftar).</p>
+  </div>
+  <a href="${basePath}?data=registrations_csv" class="ktp-btn" style="padding:8px 16px;font-size:13px">📥 Unduh CSV (Excel)</a>
+</div>
+<div class="toolbar" style="margin-top:14px">
+  <input id="reg-search" type="search" aria-label="Cari data pendaftar" placeholder="Cari nama, NIK, kost, kota, atau nomor WhatsApp...">
+</div>
+<div class="table-wrap"><table>
+<thead><tr>
+  <th scope="col">Waktu</th>
+  <th scope="col">Pilihan Kost</th>
+  <th scope="col">Nama Lengkap</th>
+  <th scope="col">NIK</th>
+  <th scope="col">No. WA</th>
+  <th scope="col">Orang Tua / Wali</th>
+  <th scope="col">Alamat Asal</th>
+  <th scope="col">Kendaraan</th>
+  <th scope="col">KTP</th>
+</tr></thead>
+<tbody id="reg-entries">
+${rows}
+</tbody>
+</table></div>
+</section>`;
+}
+
 function renderRoomsForm(rooms, message, basePath = "/admin") {
   const typeLabels = { ac: "AC", nonac: "Non-AC" };
   const fieldsets = Object.entries(targetNames)
@@ -930,6 +1112,574 @@ function renderRoomsSection(rooms, message) {
 <p class="intro">Isi jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe itu. ${updated}</p>
 ${renderRoomsForm(rooms, message)}
 </section>`;
+}
+
+
+const daftarScript = `(function(){
+let ktpBase64 = "";
+const fileInput = document.getElementById("ktp-file");
+const uploadZone = document.getElementById("upload-zone");
+const uploadPreview = document.getElementById("upload-preview");
+const thumbImg = document.getElementById("upload-thumb");
+const fileNameEl = document.getElementById("upload-name");
+const fileSizeEl = document.getElementById("upload-size");
+const changeBtn = document.getElementById("upload-change");
+const form = document.getElementById("reg-form");
+const errorBanner = document.getElementById("error-banner");
+const submitBtn = document.getElementById("submit-btn");
+const successScreen = document.getElementById("success-screen");
+const formCard = document.getElementById("form-card");
+const headSec = document.getElementById("head-sec");
+
+uploadZone.addEventListener("click", () => fileInput.click());
+uploadZone.addEventListener("dragover", (e) => { e.preventDefault(); uploadZone.style.borderColor = "var(--blue-dark)"; });
+uploadZone.addEventListener("dragleave", () => { uploadZone.style.borderColor = ""; });
+uploadZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadZone.style.borderColor = "";
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    handleFile(e.dataTransfer.files[0]);
+  }
+});
+
+changeBtn.addEventListener("click", (e) => { e.stopPropagation(); fileInput.click(); });
+fileInput.addEventListener("change", () => {
+  if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+  if (!file.type.startsWith("image/")) {
+    showError("File yang diunggah harus berupa gambar (JPG, PNG, atau WEBP).");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 1280;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      ktpBase64 = canvas.toDataURL("image/jpeg", 0.82);
+      thumbImg.src = ktpBase64;
+      fileNameEl.textContent = file.name;
+      const kb = Math.round((ktpBase64.length * 3 / 4) / 1024);
+      fileSizeEl.textContent = kb + " KB (teroptimasi siap unggah)";
+      uploadZone.style.display = "none";
+      uploadPreview.style.display = "flex";
+      hideError();
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+const nikInput = document.getElementById("nik");
+const nikCount = document.getElementById("nik-count");
+nikInput.addEventListener("input", function() {
+  this.value = this.value.replace(/\\D/g, "").slice(0, 16);
+  nikCount.textContent = this.value.length + " / 16 digit";
+});
+
+function showError(msg) {
+  errorBanner.textContent = msg;
+  errorBanner.style.display = "block";
+  errorBanner.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function hideError() {
+  errorBanner.style.display = "none";
+}
+
+form.addEventListener("submit", async function(e) {
+  e.preventDefault();
+  hideError();
+  const kostEl = form.querySelector('input[name="kost"]:checked');
+  if (!kostEl) return showError("Silakan pilih unit kost yang diinginkan.");
+  const kost = kostEl.value;
+  const fullName = form.fullName.value.trim();
+  const nik = form.nik.value.trim();
+  const address = form.address.value.trim();
+  const phone = form.phone.value.trim();
+  const guardianName = form.guardianName.value.trim();
+  const guardianPhone = form.guardianPhone.value.trim();
+  const vehicleEl = form.querySelector('input[name="vehicle"]:checked');
+  const vehicle = vehicleEl ? vehicleEl.value : "Tidak Membawa Kendaraan";
+  const agreement = form.agreement.checked;
+
+  if (!fullName) return showError("Nama lengkap calon penghuni wajib diisi.");
+  if (nik.length !== 16) return showError("NIK harus berjumlah tepat 16 digit angka sesuai KTP.");
+  if (!address) return showError("Alamat asal sesuai KTP wajib diisi.");
+  if (phone.length < 9) return showError("Nomor WhatsApp calon penghuni tidak valid.");
+  if (!guardianName) return showError("Nama orang tua / wali wajib diisi.");
+  if (guardianPhone.length < 9) return showError("Nomor WhatsApp orang tua / wali tidak valid.");
+  if (!ktpBase64) return showError("Silakan unggah foto KTP asli calon penghuni.");
+  if (!agreement) return showError("Anda harus mencentang persetujuan tata tertib kost untuk mendaftar.");
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Mengirim Pendaftaran...";
+
+  try {
+    const res = await fetch("/daftar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kost, fullName, nik, address, phone, guardianName, guardianPhone, vehicle, agreement, ktpImage: ktpBase64
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      showError(data.error || "Terjadi kesalahan saat menyimpan pendaftaran.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Kirim Pendaftaran";
+      return;
+    }
+
+    formCard.style.display = "none";
+    headSec.style.display = "none";
+    document.getElementById("sum-name").textContent = fullName;
+    document.getElementById("sum-kost").textContent = kost;
+    document.getElementById("sum-nik").textContent = nik;
+    document.getElementById("sum-phone").textContent = phone;
+    document.getElementById("sum-vehicle").textContent = vehicle;
+    document.getElementById("wa-link-btn").href = data.whatsappUrl;
+    successScreen.style.display = "block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    showError("Gagal terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Kirim Pendaftaran";
+  }
+});
+})();`;
+
+function renderDaftarPage() {
+  const hash = createHash("sha256").update(daftarScript).digest("base64");
+  return `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Formulir Pendaftaran Penghuni | Kost Tiga A</title>
+<meta name="description" content="Formulir resmi pendaftaran calon penghuni Kost Putri Athaya dan Kost Putri Alya Yogyakarta.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Manrope:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f6f3eb;--white:#fffdf8;--ink:#242d29;--muted:#6d716a;--line:#e8e1d1;--blue:#526b5b;--blue-dark:#354c3f;--night:#1f3028;--acid:#d7d6a1;--border-acid:#bca878;--cream:#eeeadf;--green:#15803d;--green-dark:#166534}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:radial-gradient(ellipse at 14% 8%,rgb(82 107 91 / 7%),transparent 30rem),radial-gradient(ellipse at 88% 42%,rgb(216 195 145 / 10%),transparent 32rem),var(--paper);-webkit-font-smoothing:antialiased}
+header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:0 max(20px,calc((100% - 900px)/2));background:rgba(255,253,248,0.92);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-family:Manrope,sans-serif;font-weight:800;font-size:16px}
+.mark{display:grid;width:36px;aspect-ratio:1;place-items:center;border:1px solid var(--border-acid);border-radius:10px;background:var(--acid);color:var(--night);font-family:Manrope,sans-serif;font-size:13px;font-weight:800;transform:rotate(-3deg)}
+.nav-back{font-size:13px;font-weight:700;color:var(--blue-dark);text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;transition:all .15s ease}
+.nav-back:hover{background:var(--cream);border-color:#d8cba9}
+main{width:min(680px,calc(100% - 32px));margin:32px auto 80px}
+.hero-head{text-align:center;margin-bottom:28px}
+.eyebrow{display:inline-block;margin:0 0 8px;padding:4px 12px;border-radius:999px;background:var(--cream);border:1px solid var(--line);color:var(--blue-dark);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px);font-weight:900;line-height:1.2;letter-spacing:-.025em;color:var(--ink)}
+.subtitle{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.form-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:0 12px 36px rgba(36,45,41,0.05)}
+.form-section{padding-bottom:24px;margin-bottom:24px;border-bottom:1px solid var(--paper)}
+.form-section:last-of-type{border-bottom:0;padding-bottom:0;margin-bottom:0}
+.sec-title{margin:0 0 14px;font-family:Manrope,sans-serif;font-size:15px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px}
+.sec-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--cream);color:var(--blue-dark);font-size:11px;font-weight:800}
+.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.choice-label{display:block;position:relative;cursor:pointer}
+.choice-label input{position:absolute;opacity:0;pointer-events:none}
+.choice-box{padding:16px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);transition:all .15s ease}
+.choice-label input:checked + .choice-box{border-color:var(--blue-dark);background:#f0f5f2;box-shadow:0 0 0 2px var(--blue-dark)}
+.choice-title{display:block;font-family:Manrope,sans-serif;font-size:14px;font-weight:800;color:var(--ink);margin-bottom:4px}
+.choice-desc{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+.field-grid{display:grid;grid-template-columns:1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:13px;font-weight:700;color:#374151;display:flex;align-items:center;justify-content:space-between}
+.req{color:#dc2626;margin-left:2px}
+.form-input,.form-textarea{width:100%;padding:11px 14px;font-family:inherit;font-size:14px;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:10px;transition:border-color .15s ease,box-shadow .15s ease}
+.form-input:focus,.form-textarea:focus{outline:none;border-color:var(--blue-dark);box-shadow:0 0 0 3px rgba(53,76,63,0.12)}
+.form-hint{font-size:11px;color:var(--muted);margin-top:2px}
+.upload-zone{border:2px dashed #cfc5b0;border-radius:12px;padding:24px;text-align:center;background:#fbf9f4;cursor:pointer;transition:all .15s ease}
+.upload-zone:hover{border-color:var(--blue-dark);background:#f4f8f5}
+.upload-icon{width:40px;height:40px;margin:0 auto 10px;color:var(--blue)}
+.upload-preview{display:none;margin-top:12px;padding:12px;border-radius:10px;background:#fff;border:1px solid var(--line);align-items:center;gap:14px}
+.upload-thumb{width:80px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.upload-info{flex:1;text-align:left}
+.upload-info-name{font-size:12px;font-weight:700;color:var(--ink)}
+.upload-info-size{font-size:11px;color:var(--muted)}
+.radio-list{display:flex;flex-direction:column;gap:10px}
+.radio-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:13px;font-weight:600}
+.radio-item:hover{background:#f0ece3}
+.agreement-card{padding:14px 16px;border-radius:12px;background:#fdfbf7;border:1px solid #e5dcce;display:flex;align-items:flex-start;gap:12px}
+.agreement-card input{margin-top:3px;width:18px;height:18px;accent-color:var(--blue-dark);cursor:pointer}
+.agreement-text{font-size:12px;line-height:1.6;color:#4b5563;margin:0;cursor:pointer}
+.submit-btn{width:100%;min-height:48px;padding:12px 24px;border:0;border-radius:12px;background:var(--blue-dark);color:#fff;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(53,76,63,0.25);transition:all .15s ease;margin-top:24px}
+.submit-btn:hover{background:var(--night);transform:translateY(-1px)}
+.submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.error-banner{display:none;padding:12px 16px;border-radius:10px;background:#fdf2f2;border:1px solid #f8d7da;color:#b91c1c;font-size:13px;font-weight:600;margin-bottom:20px}
+.success-screen{display:none;background:#fff;border:1px solid var(--line);border-radius:20px;padding:40px 32px;text-align:center;box-shadow:0 12px 36px rgba(36,45,41,0.05)}
+.success-icon{width:64px;height:64px;border-radius:50%;background:#dcfce7;color:#16a34a;display:grid;place-items:center;margin:0 auto 20px}
+.success-icon svg{width:36px;height:36px}
+.success-title{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:24px;font-weight:900;color:var(--ink)}
+.success-desc{margin:0 0 24px;color:var(--muted);font-size:14px;line-height:1.6}
+.summary-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 20px;text-align:left;margin-bottom:28px}
+.summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+.summary-row:last-child{border-bottom:0}
+.summary-label{color:var(--muted)}
+.summary-val{font-weight:700;color:var(--ink);text-align:right}
+.wa-confirm-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:48px;padding:12px 24px;border-radius:12px;background:#25d366;color:#fff;font-family:inherit;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 4px 12px rgba(37,211,102,0.3);transition:all .15s ease}
+.wa-confirm-btn:hover{background:#1ebc59;transform:translateY(-1px)}
+.wa-confirm-btn svg{width:22px;height:22px;fill:currentColor}
+.back-link{display:inline-block;margin-top:16px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
+.back-link:hover{color:var(--ink);text-decoration:underline}
+@media (max-width:600px){.choice-grid{grid-template-columns:1fr}.form-card{padding:20px 16px;border-radius:16px}.success-screen{padding:32px 18px}}
+</style>
+</head>
+<body>
+<header>
+<a class="brand" href="/"><span class="mark">3A</span><span>Kost Tiga A</span></a>
+<a class="nav-back" href="/">← Beranda</a>
+</header>
+<main>
+<div class="hero-head" id="head-sec">
+  <span class="eyebrow">Formulir Resmi</span>
+  <h1>Pendaftaran Penghuni</h1>
+  <p class="subtitle">Lengkapi formulir di bawah ini dengan data asli dan valid untuk keperluan administrasi sewa kamar di Kost Putri Athaya atau Kost Putri Alya.</p>
+</div>
+
+<div class="form-card" id="form-card">
+  <div id="error-banner" class="error-banner" role="alert"></div>
+  <form id="reg-form" novalidate>
+    <div class="form-section">
+      <h2 class="sec-title"><span class="sec-num">1</span> Pilihan Unit Kost</h2>
+      <div class="choice-grid">
+        <label class="choice-label">
+          <input type="radio" name="kost" value="Kost Putri Athaya" required checked>
+          <div class="choice-box">
+            <span class="choice-title">Kost Putri Athaya</span>
+            <span class="choice-desc">Putri • Belakang Kampus UMY • Kamar AC & Non-AC</span>
+          </div>
+        </label>
+        <label class="choice-label">
+          <input type="radio" name="kost" value="Kost Putri Alya" required>
+          <div class="choice-box">
+            <span class="choice-title">Kost Putri Alya</span>
+            <span class="choice-desc">Putri • Belakang Kampus UMY • Kamar AC & Non-AC</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="sec-title"><span class="sec-num">2</span> Identitas Calon Penghuni</h2>
+      <div class="field-grid">
+        <div class="form-group">
+          <label class="form-label" for="full-name">Nama Lengkap <span class="req">*</span></label>
+          <input class="form-input" id="full-name" name="fullName" required placeholder="Sesuai nama di KTP" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nik">
+            <span>Nomor Induk Kependudukan (NIK) <span class="req">*</span></span>
+            <span class="form-hint" id="nik-count">0 / 16 digit</span>
+          </label>
+          <input class="form-input" id="nik" name="nik" required maxlength="16" inputmode="numeric" placeholder="16 digit angka KTP">
+          <span class="form-hint">Wajib tepat 16 digit angka sesuai KTP asli.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="address">Alamat Asal Sesuai KTP <span class="req">*</span></label>
+          <textarea class="form-textarea" id="address" name="address" rows="3" required placeholder="Contoh: Jl. Mawar No. 12, RT 01/RW 02, Desa Kauman, Ponorogo, Jawa Timur"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">Nomor WhatsApp / HP Penghuni <span class="req">*</span></label>
+          <input class="form-input" id="phone" name="phone" type="tel" required placeholder="08xxxxxxxxxx" inputmode="tel" autocomplete="tel">
+          <span class="form-hint">Nomor aktif WhatsApp untuk komunikasi harian & konfirmasi kamar.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="sec-title"><span class="sec-num">3</span> Kontak Orang Tua / Wali</h2>
+      <div class="field-grid">
+        <div class="form-group">
+          <label class="form-label" for="guardian-name">Nama Orang Tua / Wali <span class="req">*</span></label>
+          <input class="form-input" id="guardian-name" name="guardianName" required placeholder="Nama ayah, ibu, atau wali keluarga">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="guardian-phone">Nomor WhatsApp Orang Tua / Wali <span class="req">*</span></label>
+          <input class="form-input" id="guardian-phone" name="guardianPhone" type="tel" required placeholder="08xxxxxxxxxx" inputmode="tel">
+          <span class="form-hint">Nomor darurat keluarga yang dapat dihubungi pengelola sewaktu-waktu.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="sec-title"><span class="sec-num">4</span> Unggah Foto KTP Asli</h2>
+      <input type="file" id="ktp-file" accept="image/*" capture="environment" style="display:none">
+      <div class="upload-zone" id="upload-zone">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        <div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:4px">Klik atau Seret Foto KTP ke Sini</div>
+        <div class="form-hint">Format JPG, PNG, atau WEBP. Foto otomatis dioptimalkan agar cepat terkirim.</div>
+      </div>
+      <div class="upload-preview" id="upload-preview">
+        <img id="upload-thumb" class="upload-thumb" alt="Pratinjau KTP">
+        <div class="upload-info">
+          <div class="upload-info-name" id="upload-name">ktp.jpg</div>
+          <div class="upload-info-size" id="upload-size">Teroptimasi</div>
+        </div>
+        <button type="button" class="nav-back" id="upload-change" style="cursor:pointer">Ganti</button>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="sec-title"><span class="sec-num">5</span> Kendaraan yang Dibawa</h2>
+      <div class="radio-list">
+        <label class="radio-item">
+          <input type="radio" name="vehicle" value="Kendaraan Roda Dua / Motor" checked>
+          <span>Kendaraan Roda Dua / Motor</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="vehicle" value="Kendaraan Roda Empat / Mobil">
+          <span>Kendaraan Roda Empat / Mobil</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="vehicle" value="Tidak Membawa Kendaraan">
+          <span>Tidak Membawa Kendaraan</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="sec-title"><span class="sec-num">6</span> Persetujuan Tata Tertib</h2>
+      <label class="agreement-card">
+        <input type="checkbox" name="agreement" required>
+        <p class="agreement-text">Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini serta bersedia menerima sanksi apabila melakukan pelanggaran.</p>
+      </label>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submit-btn">Kirim Pendaftaran</button>
+  </form>
+</div>
+
+<div class="success-screen" id="success-screen">
+  <div class="success-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  </div>
+  <h2 class="success-title">Pendaftaran Berhasil Dikirim!</h2>
+  <p class="success-desc">Data pendaftaran calon penghuni telah tersimpan di sistem Kost Tiga A. Silakan lanjutkan konfirmasi langsung ke pengelola kost melalui WhatsApp di bawah ini.</p>
+  
+  <div class="summary-box">
+    <div class="summary-row"><span class="summary-label">Nama Lengkap</span><span class="summary-val" id="sum-name">-</span></div>
+    <div class="summary-row"><span class="summary-label">Pilihan Unit</span><span class="summary-val" id="sum-kost">-</span></div>
+    <div class="summary-row"><span class="summary-label">NIK</span><span class="summary-val" id="sum-nik">-</span></div>
+    <div class="summary-row"><span class="summary-label">No. WhatsApp</span><span class="summary-val" id="sum-phone">-</span></div>
+    <div class="summary-row"><span class="summary-label">Kendaraan</span><span class="summary-val" id="sum-vehicle">-</span></div>
+  </div>
+
+  <a id="wa-link-btn" href="#" target="_blank" rel="noopener noreferrer" class="wa-confirm-btn">
+    <svg viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.23 8.23 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/></svg>
+    <span>Konfirmasi ke Pengelola via WhatsApp</span>
+  </a>
+  <div>
+    <a href="/" class="back-link">Kembali ke Halaman Utama</a>
+  </div>
+</div>
+</main>
+<script>${daftarScript}</script>
+</body>
+</html>`;
+}
+
+async function handleDaftar(request, response, dataDir) {
+  if (request.method === "GET" || request.method === "HEAD") {
+    const body = renderDaftarPage();
+    const hash = createHash("sha256").update(daftarScript).digest("base64");
+    response.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": Buffer.byteLength(body),
+      "Cache-Control": "public, max-age=300",
+      "Content-Security-Policy": [
+        "default-src 'none'",
+        `script-src 'sha256-${hash}'`,
+        "style-src 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src https://fonts.gstatic.com",
+        "img-src 'self' data: blob:",
+        "connect-src 'self'",
+        "form-action 'self'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+      ].join("; "),
+    });
+    response.end(request.method === "HEAD" ? undefined : body);
+    return;
+  }
+
+  if (request.method !== "POST") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD, POST" });
+    return;
+  }
+
+  let payload;
+  try {
+    const raw = await readBody(request, 2 * 1024 * 1024);
+    payload = JSON.parse(raw);
+  } catch (error) {
+    response.writeHead(error.statusCode === 413 ? 413 : 400, {
+      "Content-Type": "application/json; charset=utf-8",
+    });
+    response.end(JSON.stringify({ ok: false, error: error.statusCode === 413 ? "Ukuran data/foto terlalu besar (maksimal 2MB)." : "Format data tidak valid." }));
+    return;
+  }
+
+  const kost = String(payload.kost || "").trim();
+  const fullName = String(payload.fullName || "").trim();
+  const nik = String(payload.nik || "").trim();
+  const address = String(payload.address || "").trim();
+  const phone = String(payload.phone || "").trim();
+  const guardianName = String(payload.guardianName || "").trim();
+  const guardianPhone = String(payload.guardianPhone || "").trim();
+  const vehicle = String(payload.vehicle || "").trim();
+  const agreement = String(payload.agreement || "").trim();
+  const ktpBase64 = String(payload.ktpImage || "");
+
+  if (!["Kost Putri Athaya", "Kost Putri Alya"].includes(kost)) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Silakan pilih kost yang valid (Kost Putri Athaya atau Kost Putri Alya)." }));
+    return;
+  }
+  if (!fullName || fullName.length > 100) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Nama lengkap calon penghuni wajib diisi (maksimal 100 karakter)." }));
+    return;
+  }
+  if (!/^\d{16}$/.test(nik)) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "NIK harus berjumlah tepat 16 digit angka sesuai KTP." }));
+    return;
+  }
+  if (!address || address.length > 500) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Alamat asal sesuai KTP wajib diisi." }));
+    return;
+  }
+  if (!phone || phone.length < 9 || phone.length > 20) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Nomor WhatsApp / HP penghuni wajib diisi dengan format yang benar." }));
+    return;
+  }
+  if (!guardianName || guardianName.length > 100) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Nama orang tua / wali wajib diisi." }));
+    return;
+  }
+  if (!guardianPhone || guardianPhone.length < 9 || guardianPhone.length > 20) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Nomor WhatsApp orang tua / wali wajib diisi dengan format yang benar." }));
+    return;
+  }
+  if (!ktpBase64 || ktpBase64.length < 50) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Foto KTP wajib diunggah." }));
+    return;
+  }
+  if (!agreement) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Anda harus menyetujui tata tertib kost untuk mendaftar." }));
+    return;
+  }
+
+  const id = `reg_${Date.now()}_${randomBytes(4).toString("hex")}`;
+  let ktpFilename = "";
+  try {
+    ktpFilename = await saveKtpImage(dataDir, id, ktpBase64);
+  } catch (err) {
+    console.error("Failed to save KTP image:", err);
+    response.writeHead(500, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: false, error: "Gagal menyimpan foto KTP. Silakan coba lagi." }));
+    return;
+  }
+
+  const entry = {
+    id,
+    timestamp: new Date().toISOString(),
+    kost,
+    fullName,
+    nik,
+    address,
+    phone,
+    guardianName,
+    guardianPhone,
+    ktpImage: ktpFilename,
+    vehicle: vehicle || "Tidak Membawa Kendaraan",
+    agreement: typeof agreement === "boolean" ? "Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini serta bersedia menerima sanksi apabila melakukan pelanggaran." : agreement,
+  };
+
+  await saveRegistration(dataDir, entry);
+
+  const isAthaya = kost.toLowerCase().includes("athaya");
+  const managerPhone = isAthaya ? "628990004926" : "6289679059555";
+  const managerName = isAthaya ? "Bu Athaya" : "Mbak Alya";
+  const waText = `Halo Pengelola Kost Tiga A (${managerName}),\nSaya sudah mengisi formulir pendaftaran penghuni baru:\n\n*Nama:* ${fullName}\n*Pilihan Kost:* ${kost}\n*NIK:* ${nik}\n*No. WA:* ${phone}\n*Kendaraan:* ${entry.vehicle}\n*Alamat Asal:* ${address}\n\nMohon konfirmasi pendaftaran saya. Terima kasih!`;
+  const whatsappUrl = `https://wa.me/${managerPhone}?text=${encodeURIComponent(waText)}`;
+
+  response.writeHead(200, { "Content-Type": "application/json" });
+  response.end(JSON.stringify({
+    ok: true,
+    id,
+    kost,
+    fullName,
+    managerPhone,
+    whatsappUrl,
+    message: "Pendaftaran berhasil disimpan!",
+  }));
+}
+
+async function handleKtpDownload(request, response, dataDir, auth, sessions) {
+  if (!isAdmin(request, auth, sessions)) {
+    rejectAdmin(response, auth);
+    return;
+  }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+    return;
+  }
+  const url = new URL(request.url, "http://localhost");
+  const filename = path.basename(url.pathname);
+  if (!filename || filename === "uploads" || filename.includes("..")) {
+    sendError(response, 404, "Not Found");
+    return;
+  }
+  const filePath = path.join(dataDir, "uploads", filename);
+  try {
+    const fileStat = await stat(filePath);
+    if (!fileStat.isFile()) {
+      sendError(response, 404, "Not Found");
+      return;
+    }
+    response.writeHead(200, {
+      "Content-Type": "image/jpeg",
+      "Content-Length": fileStat.size,
+      "Cache-Control": "private, max-age=3600",
+      "X-Content-Type-Options": "nosniff",
+    });
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
+    createReadStream(filePath).pipe(response);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      sendError(response, 404, "Not Found");
+      return;
+    }
+    sendError(response, 500, "Internal Server Error");
+  }
 }
 
 const compressibleTypes = new Set([".html", ".js", ".svg", ".xml", ".txt"]);
@@ -1447,6 +2197,14 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
+    } else if (pathname === "/daftar" || pathname === "/daftar/") {
+      handler = handleDaftar(request, response, dataDir);
+    } else if (pathname === "/formulir" || pathname === "/formulir/") {
+      response.writeHead(301, { Location: "/daftar", "Cache-Control": "public, max-age=86400" });
+      response.end();
+      return;
+    } else if (pathname.startsWith("/admin/uploads/") || pathname.startsWith("/dashboard/uploads/")) {
+      handler = handleKtpDownload(request, response, dataDir, adminAuth, adminSessions);
     } else if (pathname === "/admin" || pathname === "/admin/" || pathname === "/dashboard" || pathname === "/dashboard/") {
       handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth, adminSessions);
     } else if (legacyAdminRoutes.has(pathname)) {

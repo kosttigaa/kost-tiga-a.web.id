@@ -588,4 +588,95 @@ describe("static website server", () => {
     assert.equal(methodResponse.status, 405);
     assert.equal(methodResponse.headers.get("allow"), "GET, HEAD");
   });
+
+  it("serves registration page, handles submissions, protects uploads, and exports CSV", async () => {
+    // 1. GET /daftar
+    const getDaftar = await fetch(`${baseUrl}/daftar`);
+    assert.equal(getDaftar.status, 200);
+    assert.match(getDaftar.headers.get("content-type"), /text\/html/);
+    assert.ok(getDaftar.headers.get("content-security-policy"));
+    const html = await getDaftar.text();
+    assert.match(html, /Formulir Pendaftaran Penghuni/);
+    assert.match(html, /Kost Putri Athaya/);
+    assert.match(html, /Kost Putri Alya/);
+
+    // 2. GET /formulir redirects to /daftar
+    const redirectRes = await fetch(`${baseUrl}/formulir`, { redirect: "manual" });
+    assert.equal(redirectRes.status, 301);
+    assert.equal(redirectRes.headers.get("location"), "/daftar");
+
+    // 3. Validation rejection for invalid data
+    const invalidRes = await fetch(`${baseUrl}/daftar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName: "Syifa" }),
+    });
+    assert.equal(invalidRes.status, 400);
+    const invalidJson = await invalidRes.json();
+    assert.equal(invalidJson.ok, false);
+
+    // 4. Valid submission matching the user's sample database row
+    // Sample fake 1x1 pixel base64 jpeg
+    const fakeKtpBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=";
+    const postRes = await fetch(`${baseUrl}/daftar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kost: "Kost Putri Alya",
+        fullName: "Syifa Kamila",
+        nik: "3502104110000001",
+        address: "Ponorogo, jawa timur",
+        phone: "085843583117",
+        guardianName: "Sukarman",
+        guardianPhone: "085843583117",
+        vehicle: "Kendaraan Roda Dua / Motor",
+        ktpImage: fakeKtpBase64,
+        agreement: true,
+      }),
+    });
+    assert.equal(postRes.status, 200);
+    const postJson = await postRes.json();
+    assert.equal(postJson.ok, true);
+    assert.equal(postJson.managerPhone, "6289679059555");
+    assert.match(postJson.whatsappUrl, /wa\.me\/6289679059555/);
+
+    // 5. Upload protection
+    const ktpFilename = `${postJson.id}-ktp.jpg`;
+    const unauthKtp = await fetch(`${baseUrl}/admin/uploads/${ktpFilename}`);
+    assert.ok(unauthKtp.status === 401 || unauthKtp.status === 503);
+
+    // 6. Access upload with admin secret
+    const adminServer = createServer({ dataDir, adminSecret: "secret-key" });
+    await new Promise((resolve) => adminServer.listen(0, "127.0.0.1", resolve));
+    try {
+      const adminBaseUrl = `http://127.0.0.1:${adminServer.address().port}`;
+      const authKtp = await fetch(`${adminBaseUrl}/admin/uploads/${ktpFilename}`, {
+        headers: { "X-Admin-Secret": "secret-key" },
+      });
+      assert.equal(authKtp.status, 200);
+      assert.equal(authKtp.headers.get("content-type"), "image/jpeg");
+
+      // 7. Verify registrations CSV export
+      const csvRes = await fetch(`${adminBaseUrl}/admin?data=registrations_csv`, {
+        headers: { "X-Admin-Secret": "secret-key" },
+      });
+      assert.equal(csvRes.status, 200);
+      assert.match(csvRes.headers.get("content-type"), /text\/csv/);
+      const csvText = await csvRes.text();
+      assert.match(csvText, /Syifa Kamila/);
+      assert.match(csvText, /'3502104110000001/);
+      assert.match(csvText, /Kost Putri Alya/);
+
+      // 8. Verify dashboard includes #registrations section
+      const dashRes = await fetch(`${adminBaseUrl}/admin`, {
+        headers: { "X-Admin-Secret": "secret-key" },
+      });
+      assert.equal(dashRes.status, 200);
+      const dashHtml = await dashRes.text();
+      assert.match(dashHtml, /id="registrations"/);
+      assert.match(dashHtml, /Syifa Kamila/);
+    } finally {
+      await closeTestServer(adminServer);
+    }
+  });
 });
