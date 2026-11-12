@@ -330,11 +330,10 @@ describe("static website server", () => {
       assert.equal((await fetch(url)).status, 404);
       assert.equal((await fetch(url, { headers: { "X-Admin-Secret": "wrong" } })).status, 404);
 
-      const redirect = await fetch(dashUrl, { redirect: "manual" });
-      assert.equal(redirect.status, 301);
-      assert.equal(redirect.headers.get("location"), "/admin");
-
       const ok = await fetch(url, { headers: { "X-Admin-Secret": secret } });
+      const okDash = await fetch(dashUrl, { headers: { "X-Admin-Secret": secret } });
+      assert.equal(ok.status, 200);
+      assert.equal(okDash.status, 200);
       const html = await ok.text();
       assert.equal(ok.status, 200);
       assert.equal(ok.headers.get("cache-control"), "no-store");
@@ -380,13 +379,13 @@ describe("static website server", () => {
     await new Promise((resolve) => logsServer.listen(0, "127.0.0.1", resolve));
     const origin = `http://127.0.0.1:${logsServer.address().port}`;
     try {
-      const dashRedirect = await fetch(`${origin}/dashboard`, { redirect: "manual" });
-      assert.equal(dashRedirect.status, 301);
-      assert.equal(dashRedirect.headers.get("location"), "/admin");
-
       const unauthenticated = await fetch(`${origin}/admin`);
       assert.equal(unauthenticated.status, 200);
       assert.match(await unauthenticated.text(), /name="username"/);
+
+      const unauthenticatedDash = await fetch(`${origin}/dashboard`);
+      assert.equal(unauthenticatedDash.status, 200);
+      assert.match(await unauthenticatedDash.text(), /name="username"/);
 
       const login = await fetch(`${origin}/admin`, {
         method: "POST",
