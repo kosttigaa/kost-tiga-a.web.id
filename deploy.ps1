@@ -28,14 +28,15 @@ $replacement = "Terakhir diperbarui: <time datetime=`"$iso`">$label</time>"
 $pattern = 'Terakhir diperbarui: <time datetime="[^"]*">[^<]*</time>'
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
-foreach ($file in Get-ChildItem -Path . -Filter *.html) {
+$targetFiles = @(Get-ChildItem -Path . -Filter *.html) + @(Get-Item -Path .\server.js)
+foreach ($file in $targetFiles) {
   $text = [IO.File]::ReadAllText($file.FullName)
   if ($text -match $pattern) {
     [IO.File]::WriteAllText($file.FullName, [regex]::Replace($text, $pattern, $replacement), $utf8)
   }
 }
 
-git add -- *.html
+git add -- *.html server.js
 git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 

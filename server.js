@@ -737,6 +737,9 @@ function renderAdminPage({ title, content, showNavigation = true, showLogout = f
 <main>
 ${showNavigation ? `<nav class="admin-nav" aria-label="Menu admin">${links}</nav>` : ""}
 ${content}
+<footer style="margin-top:40px;padding-top:20px;border-top:1px solid var(--line);text-align:center;font-size:12px;color:var(--muted)">
+<p style="margin:0">Panel Pengelola Kost Tiga A · Terakhir diperbarui: <time datetime="2026-11-13T00:06:35+07:00">13 November 2026, 00:06:35 WIB</time></p>
+</footer>
 </main>
 </body>
 </html>
@@ -1814,6 +1817,9 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
     <a href="/" class="back-link">Kembali ke Halaman Utama</a>
   </div>
 </div>
+<footer style="margin-top:40px;text-align:center;font-size:12px;color:var(--muted)">
+<p style="margin:0">Kost Tiga A · Terakhir diperbarui: <time datetime="2026-11-13T00:06:35+07:00">13 November 2026, 00:06:35 WIB</time></p>
+</footer>
 </main>
 <script>${daftarScript}</script>
 </body>
