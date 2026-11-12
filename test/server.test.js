@@ -318,7 +318,8 @@ describe("static website server", () => {
     const statsDir = await mkdtemp(path.join(tmpdir(), "kost-stats-"));
     const statsServer = createServer({ dataDir: statsDir, adminSecret: secret });
     await new Promise((resolve) => statsServer.listen(0, "127.0.0.1", resolve));
-    const url = `http://127.0.0.1:${statsServer.address().port}/dashboard`;
+    const url = `http://127.0.0.1:${statsServer.address().port}/admin`;
+    const dashUrl = `http://127.0.0.1:${statsServer.address().port}/dashboard`;
     try {
       await writeFile(
         path.join(statsDir, "clicks.jsonl"),
@@ -329,15 +330,19 @@ describe("static website server", () => {
       assert.equal((await fetch(url)).status, 404);
       assert.equal((await fetch(url, { headers: { "X-Admin-Secret": "wrong" } })).status, 404);
 
+      const redirect = await fetch(dashUrl, { redirect: "manual" });
+      assert.equal(redirect.status, 301);
+      assert.equal(redirect.headers.get("location"), "/admin");
+
       const ok = await fetch(url, { headers: { "X-Admin-Secret": secret } });
       const html = await ok.text();
       assert.equal(ok.status, 200);
       assert.equal(ok.headers.get("cache-control"), "no-store");
       assert.match(html, /<strong>77<\/strong><span>Pengunjung unik<\/span>/);
       assert.match(html, /<strong>1<\/strong><span>Total klik WhatsApp<\/span>/);
-      assert.match(html, /href="\/dashboard#logs"/);
-      assert.match(html, /href="\/dashboard#stats"/);
-      assert.match(html, /href="\/dashboard#rooms"/);
+      assert.match(html, /href="\/admin#logs"/);
+      assert.match(html, /href="\/admin#stats"/);
+      assert.match(html, /href="\/admin#rooms"/);
       assert.match(html, /id="logs"/);
       assert.match(html, /id="stats"[^>]* hidden/);
       assert.match(html, /id="rooms"[^>]* hidden/);
@@ -348,24 +353,24 @@ describe("static website server", () => {
       assert.ok(!html.includes("<b>x</b>"));
       assert.equal((await fetch(url, { method: "POST", headers: { "X-Admin-Secret": secret } })).status, 403);
       for (const [route, location] of [
-        ["/admin/logs", "/dashboard#logs"],
-        ["/admin/stats", "/dashboard#stats"],
-        ["/admin/kamar", "/dashboard#rooms"],
+        ["/admin/logs", "/admin#logs"],
+        ["/admin/stats", "/admin#stats"],
+        ["/admin/kamar", "/admin#rooms"],
       ]) {
-        const legacy = await fetch(`${url.replace("/dashboard", "")}${route}`, {
+        const legacy = await fetch(`${url.replace("/admin", "")}${route}`, {
           redirect: "manual",
           headers: { "X-Admin-Secret": secret },
         });
         assert.equal(legacy.status, 308, route);
         assert.equal(legacy.headers.get("location"), location);
       }
-      assert.equal((await fetch(`${url.replace("/dashboard", "")}/admin-logs.html`)).status, 404);
+      assert.equal((await fetch(`${url.replace("/admin", "")}/admin-logs.html`)).status, 404);
     } finally {
       await closeTestServer(statsServer);
       await rm(statsDir, { recursive: true, force: true });
     }
 
-    assert.equal((await fetch(`${baseUrl}/dashboard`, { headers: { "X-Admin-Secret": "" } })).status, 503);
+    assert.equal((await fetch(`${baseUrl}/admin`, { headers: { "X-Admin-Secret": "" } })).status, 503);
   });
 
   it("supports dashboard login and logout with revocable sessions", async () => {
@@ -375,11 +380,15 @@ describe("static website server", () => {
     await new Promise((resolve) => logsServer.listen(0, "127.0.0.1", resolve));
     const origin = `http://127.0.0.1:${logsServer.address().port}`;
     try {
-      const unauthenticated = await fetch(`${origin}/dashboard`);
+      const dashRedirect = await fetch(`${origin}/dashboard`, { redirect: "manual" });
+      assert.equal(dashRedirect.status, 301);
+      assert.equal(dashRedirect.headers.get("location"), "/admin");
+
+      const unauthenticated = await fetch(`${origin}/admin`);
       assert.equal(unauthenticated.status, 200);
       assert.match(await unauthenticated.text(), /name="username"/);
 
-      const login = await fetch(`${origin}/dashboard`, {
+      const login = await fetch(`${origin}/admin`, {
         method: "POST",
         redirect: "manual",
         headers: { Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
@@ -388,21 +397,21 @@ describe("static website server", () => {
       assert.equal(login.status, 303);
       const cookie = login.headers.get("set-cookie").split(";")[0];
 
-      const page = await fetch(`${origin}/dashboard`, { headers: { Cookie: cookie } });
+      const page = await fetch(`${origin}/admin`, { headers: { Cookie: cookie } });
       assert.equal(page.status, 200);
       assert.equal(page.headers.get("cache-control"), "no-store");
       const html = await page.text();
       assert.match(html, /Log akses/);
       assert.match(html, /<button type="submit">Keluar<\/button>/);
 
-      const roomUpdate = await fetch(`${origin}/dashboard`, {
+      const roomUpdate = await fetch(`${origin}/admin`, {
         method: "POST",
         redirect: "manual",
         headers: { Cookie: cookie, Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ "alya-ac": "2", "alya-nonac": "0" }),
       });
       assert.equal(roomUpdate.status, 303);
-      assert.equal(roomUpdate.headers.get("location"), "/dashboard?saved=1#rooms");
+      assert.equal(roomUpdate.headers.get("location"), "/admin?saved=1#rooms");
       const rooms = JSON.parse(await readFile(path.join(logsDir, "rooms.json"), "utf8"));
       assert.deepEqual(rooms.alya, { ac: 2, nonac: 0 });
 
@@ -413,17 +422,17 @@ describe("static website server", () => {
       for (const route of ["/admin/logs", "/admin/stats", "/admin/kamar"]) {
         const legacy = await fetch(`${origin}${route}`, { headers: { Cookie: cookie }, redirect: "manual" });
         assert.equal(legacy.status, 308);
-        assert.match(legacy.headers.get("location"), /^\/dashboard#/);
+        assert.match(legacy.headers.get("location"), /^\/admin#/);
       }
 
-      const logResponse = await fetch(`${origin}/dashboard?data=logs`, { headers: { Cookie: cookie } });
+      const logResponse = await fetch(`${origin}/admin?data=logs`, { headers: { Cookie: cookie } });
       assert.equal(logResponse.status, 200);
       const entries = await logResponse.json();
       assert.ok(entries.some((entry) => entry.path === "/" && entry.status === 200 && entry.userAgent === "TestBrowser/1.0"));
-      assert.ok(entries.some((entry) => entry.path === "/dashboard" && entry.status === 200));
-      assert.ok((await readFile(path.join(logsDir, "access.jsonl"), "utf8")).includes("/dashboard"));
+      assert.ok(entries.some((entry) => entry.path === "/admin" && entry.status === 200));
+      assert.ok((await readFile(path.join(logsDir, "access.jsonl"), "utf8")).includes("/admin"));
 
-      const logout = await fetch(`${origin}/dashboard`, {
+      const logout = await fetch(`${origin}/admin`, {
         method: "POST",
         redirect: "manual",
         headers: { Cookie: cookie, Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
@@ -431,8 +440,8 @@ describe("static website server", () => {
       });
       assert.equal(logout.status, 303);
       assert.match(logout.headers.get("set-cookie"), /Max-Age=0/);
-      assert.equal((await fetch(`${origin}/dashboard`, { headers: { Cookie: cookie } })).status, 200);
-      assert.equal((await fetch(`${origin}/dashboard?data=logs`, { headers: { Cookie: cookie } })).status, 401);
+      assert.equal((await fetch(`${origin}/admin`, { headers: { Cookie: cookie } })).status, 200);
+      assert.equal((await fetch(`${origin}/admin?data=logs`, { headers: { Cookie: cookie } })).status, 401);
     } finally {
       await closeTestServer(logsServer);
       await rm(logsDir, { recursive: true, force: true });
@@ -445,7 +454,7 @@ describe("static website server", () => {
     const formServer = createServer({ dataDir: formDir, adminSecret: secret });
     await new Promise((resolve) => formServer.listen(0, "127.0.0.1", resolve));
     const host = `127.0.0.1:${formServer.address().port}`;
-    const url = `http://${host}/dashboard`;
+    const url = `http://${host}/admin`;
     const auth = { "X-Admin-Secret": secret };
     const post = (body, headers = {}) =>
       fetch(url, {
@@ -473,7 +482,7 @@ describe("static website server", () => {
 
       const saved = await post("alya-ac=2&alya-nonac=0&athaya-ac=&athaya-nonac=5", { Origin: `http://${host}` });
       assert.equal(saved.status, 303);
-      assert.equal(saved.headers.get("location"), "/dashboard?saved=1#rooms");
+      assert.equal(saved.headers.get("location"), "/admin?saved=1#rooms");
 
       const rooms = JSON.parse(await readFile(path.join(formDir, "rooms.json"), "utf8"));
       assert.deepEqual({ alya: rooms.alya, athaya: rooms.athaya }, { alya: { ac: 2, nonac: 0 }, athaya: { nonac: 5 } });

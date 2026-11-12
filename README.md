@@ -47,9 +47,9 @@ DATA_DIR=/var/lib/kost-tiga-a node scripts/rooms.js   # lihat status
 
 Angka 0 menampilkan "penuh". Perubahan langsung tampil tanpa restart.
 
-## Dashboard admin
+## Panel admin
 
-Log akses, statistik, dan kamar kosong sekarang tersedia pada satu halaman `/dashboard`. Menu di halaman hanya berpindah ke bagian `#logs`, `#stats`, dan `#rooms`; halaman memakai query `?data=logs` untuk memuat data log tanpa membuat route admin terpisah. URL lama `/admin/logs`, `/admin/stats`, dan `/admin/kamar` mengarahkan ke bagian yang sesuai di dashboard.
+Log akses, statistik, dan kamar kosong sekarang tersedia pada satu halaman `/admin`. Menu di halaman hanya berpindah ke bagian `#logs`, `#stats`, dan `#rooms`; halaman memakai query `?data=logs` untuk memuat data log tanpa membuat route admin terpisah. URL lama `/admin/logs`, `/admin/stats`, dan `/admin/kamar` mengarahkan ke bagian yang sesuai di panel admin. Akses ke `/dashboard` otomatis dialihkan (redirect 301) ke `/admin`.
 
 Dashboard memakai form login dengan pasangan `ADMIN_USER` dan `ADMIN_PASSWORD`. Setelah login, server membuat sesi cookie `HttpOnly` yang berlaku 8 jam; tombol Keluar mencabut sesi tersebut. HTTP Basic Auth tidak digunakan lagi. Atur kedua environment variable sebelum menjalankan server dan jangan simpan password ke Git.
 

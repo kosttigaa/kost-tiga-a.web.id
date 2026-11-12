@@ -458,21 +458,21 @@ nav.admin-nav button{width:100%}
 `;
 
 const adminLinks = [
-  ["/dashboard#logs", "Log akses"],
-  ["/dashboard#stats", "Statistik"],
-  ["/dashboard#rooms", "Kamar kosong"],
+  ["/admin#logs", "Log akses"],
+  ["/admin#stats", "Statistik"],
+  ["/admin#rooms", "Kamar kosong"],
 ];
 const legacyAdminRoutes = new Map([
-  ["/admin/logs", "/dashboard#logs"],
-  ["/admin/logs/", "/dashboard#logs"],
-  ["/admin/stats", "/dashboard#stats"],
-  ["/admin/kamar", "/dashboard#rooms"],
+  ["/admin/logs", "/admin#logs"],
+  ["/admin/logs/", "/admin#logs"],
+  ["/admin/stats", "/admin#stats"],
+  ["/admin/kamar", "/admin#rooms"],
 ]);
 
 function renderAdminPage({ title, content, showNavigation = true, showLogout = false }) {
   const links = adminLinks
     .map(([href, label], index) => `<a href="${href}"${index === 0 ? ' aria-current="page"' : ""}>${label}</a>`)
-    .join("") + (showLogout ? '<form method="post" action="/dashboard"><input type="hidden" name="action" value="logout"><button type="submit">Keluar</button></form>' : "");
+    .join("") + (showLogout ? '<form method="post" action="/admin"><input type="hidden" name="action" value="logout"><button type="submit">Keluar</button></form>' : "");
   return `<!doctype html>
 <html lang="id">
 <head>
@@ -640,7 +640,7 @@ form.login-form{display:flex;flex-direction:column;gap:16px}
       <h1 class="login-title">Kost Tiga A</h1>
       <p class="login-subtitle">Masuk ke Panel Pengelola Kost</p>
     </div>
-    <form method="post" action="/dashboard" class="login-form">
+    <form method="post" action="/admin" class="login-form">
       <div class="field-group">
         <label for="username" class="field-label">Username</label>
         <div class="input-wrapper">
@@ -656,7 +656,7 @@ form.login-form{display:flex;flex-direction:column;gap:16px}
         </div>
       </div>
       ${message ? `<p class="login-error" role="alert">${message}</p>` : ""}
-      <button type="submit" class="login-btn">Masuk Dashboard</button>
+      <button type="submit" class="login-btn">Masuk Admin</button>
     </form>
     <p class="login-footer">Panel Pengelola Kost Tiga A</p>
   </div>
@@ -696,7 +696,7 @@ function renderLogsSection() {
 const dashboardScript = `const pageSize=50,statusElement=document.getElementById("status"),entriesElement=document.getElementById("entries"),searchElement=document.getElementById("search"),previousPageButton=document.getElementById("previous-page"),nextPageButton=document.getElementById("next-page"),pageInfoElement=document.getElementById("page-info");let entries=[],currentPage=1;
 function getBrowser(userAgent){const browsers=[["Edge",/Edg(?:e|A|iOS)?\\/([\\d.]+)/],["Opera",/(?:OPR|Opera)\\/([\\d.]+)/],["Samsung Internet",/SamsungBrowser\\/([\\d.]+)/],["Firefox",/(?:Firefox|FxiOS)\\/([\\d.]+)/],["Chrome",/(?:Chrome|CriOS)\\/([\\d.]+)/],["Safari",/Version\\/([\\d.]+).*Safari/]];for(const [name,pattern] of browsers){const match=userAgent.match(pattern);if(match)return name+" "+match[1]}return "Tidak diketahui"}
 function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className,label] of [[entry.ip,"ip","IP"],[time,"time","Waktu WIB"],[entry.path,"path","Halaman"],[getBrowser(entry.userAgent),"browser","Browser"],[entry.method,"","Metode"],[String(entry.status),"status-code","Status"]]){const cell=document.createElement("td");cell.className=className;cell.dataset.label=label;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
-async function loadLog(){statusElement.textContent="Memuat log...";try{const response=await fetch("/dashboard?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
+async function loadLog(){statusElement.textContent="Memuat log...";try{const response=await fetch("/admin?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
 const sections=[...document.querySelectorAll(".dashboard-section")],tabs=[...document.querySelectorAll(".admin-nav a")];function activateSection(id){const active=sections.some(section=>section.id===id)?id:"logs";for(const section of sections)section.hidden=section.id!==active;for(const tab of tabs){if(tab.hash==="#"+active)tab.setAttribute("aria-current","page");else tab.removeAttribute("aria-current")}}for(const tab of tabs)tab.addEventListener("click",event=>{event.preventDefault();const id=tab.hash.slice(1);if(location.hash!=="#"+id)history.pushState(null,"","#"+id);activateSection(id)});addEventListener("hashchange",()=>activateSection(location.hash.slice(1)));activateSection(location.hash.slice(1)||"logs");
 document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});loadLog();`;
 
@@ -718,7 +718,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
   const url = new URL(request.url, "http://localhost");
   const pathname = url.pathname;
   let form;
-  if (pathname === "/dashboard" && request.method === "POST" && auth.adminUser && auth.adminPassword) {
+  if (pathname === "/admin" && request.method === "POST" && auth.adminUser && auth.adminPassword) {
     if (!isSameOriginRequest(request)) {
       sendError(response, 403, "Forbidden");
       return;
@@ -734,9 +734,9 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       if (token) sessions.delete(token);
       const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
       response.writeHead(303, {
-        Location: "/dashboard",
+        Location: "/admin",
         "Cache-Control": "no-store",
-        "Set-Cookie": `${adminSessionCookie}=; Max-Age=0; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
+        "Set-Cookie": `${adminSessionCookie}=; Max-Age=0; Path=/admin; HttpOnly; SameSite=Strict${secure}`,
       });
       response.end();
       return;
@@ -752,16 +752,16 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       sessions.set(token, Date.now() + adminSessionMaxAge * 1000);
       const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
       response.writeHead(303, {
-        Location: "/dashboard",
+        Location: "/admin",
         "Cache-Control": "no-store",
-        "Set-Cookie": `${adminSessionCookie}=${token}; Max-Age=${adminSessionMaxAge}; Path=/dashboard; HttpOnly; SameSite=Strict${secure}`,
+        "Set-Cookie": `${adminSessionCookie}=${token}; Max-Age=${adminSessionMaxAge}; Path=/admin; HttpOnly; SameSite=Strict${secure}`,
       });
       response.end();
       return;
     }
   }
   if (!isAdmin(request, auth, sessions)) {
-    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/dashboard" && url.searchParams.get("data") !== "logs" && auth.adminUser && auth.adminPassword) {
+    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/admin" && url.searchParams.get("data") !== "logs" && auth.adminUser && auth.adminPassword) {
       const body = renderAdminLoginPage();
       response.writeHead(200, adminPageHeaders(body));
       response.end(request.method === "HEAD" ? undefined : body);
@@ -771,7 +771,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
     return;
   }
 
-  if (pathname === "/dashboard" && url.searchParams.get("data") === "logs") {
+  if (pathname === "/admin" && url.searchParams.get("data") === "logs") {
     if (request.method !== "GET") {
       sendError(response, 405, "Method Not Allowed", { Allow: "GET" });
       return;
@@ -787,7 +787,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
     response.end(body);
     return;
   }
-  if (pathname !== "/dashboard" && pathname !== "/dashboard/") {
+  if (pathname !== "/admin" && pathname !== "/admin/") {
     sendError(response, 404, "Not Found");
     return;
   }
@@ -819,7 +819,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       }
     }
     await saveRooms(dataDir, counts);
-    response.writeHead(303, { Location: "/dashboard?saved=1#rooms", "Cache-Control": "no-store" });
+    response.writeHead(303, { Location: "/admin?saved=1#rooms", "Cache-Control": "no-store" });
     response.end();
     return;
   }
@@ -889,7 +889,7 @@ function renderRoomsForm(rooms, message) {
     })
     .join("");
   return `${message ? `<p class="ok" role="status">${escapeHtml(message)}</p>` : ""}
-<form method="post" action="/dashboard#rooms">
+<form method="post" action="/admin#rooms">
 ${fieldsets}
 <button type="submit">Simpan</button>
 </form>`;
@@ -1411,7 +1411,7 @@ export function createServer({
       };
       void accessLogs.record(entry);
     });
-    const { pathname } = new URL(request.url, "http://localhost");
+    const { pathname, search } = new URL(request.url, "http://localhost");
     let handler;
     if (pathname === "/api/click") {
       handler = handleClick(request, response, clickStore);
@@ -1419,8 +1419,12 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
-    } else if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    } else if (pathname === "/admin" || pathname === "/admin/") {
       handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth, adminSessions);
+    } else if (pathname === "/dashboard" || pathname === "/dashboard/") {
+      response.writeHead(301, { Location: `/admin${search}`, "Cache-Control": "no-store" });
+      response.end();
+      return;
     } else if (legacyAdminRoutes.has(pathname)) {
       if (!isAdmin(request, adminAuth, adminSessions)) {
         rejectAdmin(response, adminAuth);
@@ -1429,7 +1433,7 @@ export function createServer({
       response.writeHead(308, { Location: legacyAdminRoutes.get(pathname), "Cache-Control": "no-store" });
       response.end();
       return;
-    } else if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    } else if (pathname.startsWith("/admin/")) {
       sendError(response, 404, "Not Found");
       return;
     } else if ((pathname === "/" || pathname === "/index.html") && (request.method === "GET" || request.method === "HEAD")) {
