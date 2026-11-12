@@ -1317,6 +1317,22 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
 .radio-list{display:flex;flex-direction:column;gap:10px}
 .radio-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:13px;font-weight:600}
 .radio-item:hover{background:#f0ece3}
+.rules-card{border:1px solid var(--line);border-radius:14px;background:var(--paper);padding:18px 20px;margin-bottom:14px}
+.rules-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.rules-header strong{font-family:Manrope,sans-serif;font-size:15px;color:var(--ink)}
+.rules-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--cream);color:var(--blue-dark);padding:3px 8px;border-radius:999px;border:1px solid var(--line)}
+.rules-intro{margin:0 0 12px;font-size:12px;color:var(--muted)}
+.rules-content{max-height:280px;overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:14px}
+.rules-content::-webkit-scrollbar{width:6px}
+.rules-content::-webkit-scrollbar-thumb{background:#cfc5b0;border-radius:999px}
+.rule-group h4{margin:0 0 6px;font-family:Manrope,sans-serif;font-size:13px;font-weight:800;color:var(--blue-dark)}
+.rule-group ul{margin:0;padding-left:18px;font-size:12px;line-height:1.6;color:#374151}
+.rule-group li{margin-bottom:4px}
+.rule-special{background:#fdf8eb;border:1px solid #ebd9b2;border-radius:10px;padding:12px 14px}
+.rule-special h4{color:#854d0e}
+.rule-special p{margin:0 0 6px;font-size:12px;line-height:1.55;color:#713f12}
+.rule-special p:last-child{margin-bottom:0}
+.rule-note{font-size:11px;color:var(--muted);line-height:1.5;border-top:1px dashed var(--line);padding-top:10px}
 .agreement-card{padding:14px 16px;border-radius:12px;background:#fdfbf7;border:1px solid #e5dcce;display:flex;align-items:flex-start;gap:12px}
 .agreement-card input{margin-top:3px;width:18px;height:18px;accent-color:var(--blue-dark);cursor:pointer}
 .agreement-text{font-size:12px;line-height:1.6;color:#4b5563;margin:0;cursor:pointer}
@@ -1364,14 +1380,14 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
           <input type="radio" name="kost" value="Kost Putri Athaya" required checked>
           <div class="choice-box">
             <span class="choice-title">Kost Putri Athaya</span>
-            <span class="choice-desc">Putri • Belakang Kampus UMY • Kamar AC & Non-AC</span>
+            <span class="choice-desc">Putri • Kamar AC & Non-AC</span>
           </div>
         </label>
         <label class="choice-label">
           <input type="radio" name="kost" value="Kost Putri Alya" required>
           <div class="choice-box">
             <span class="choice-title">Kost Putri Alya</span>
-            <span class="choice-desc">Putri • Belakang Kampus UMY • Kamar AC & Non-AC</span>
+            <span class="choice-desc">Putri • Kamar AC & Non-AC</span>
           </div>
         </label>
       </div>
@@ -1452,8 +1468,98 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
     </div>
 
     <div class="form-section">
-      <h2 class="sec-title"><span class="sec-num">6</span> Persetujuan Tata Tertib</h2>
-      <label class="agreement-card">
+      <h2 class="sec-title"><span class="sec-num">6</span> Tata Tertib &amp; Persetujuan Sewa</h2>
+      
+      <div class="rules-card">
+        <div class="rules-header">
+          <strong>Tata Tertib Sewa Kost</strong>
+          <span class="rules-badge">Wajib Dibaca</span>
+        </div>
+        <p class="rules-intro">Untuk kenyamanan bersama antara penghuni dan pemilik, berikut adalah tata tertib yang berlaku di kost ini:</p>
+        <div class="rules-content">
+          <div class="rule-group">
+            <h4>1. Umum</h4>
+            <ul>
+              <li>Penghuni wajib menjaga ketertiban, kebersihan, dan keamanan lingkungan kost.</li>
+              <li>Penghuni dilarang membawa, menyimpan, atau menggunakan barang terlarang (narkoba, senjata tajam, minuman keras, dll).</li>
+              <li>Penghuni wajib menjaga sopan santun dan tidak mengganggu penghuni lain.</li>
+              <li>Dilarang merokok di dalam kamar dan selasar kost. Merokok hanya diperbolehkan di area yang telah ditentukan (jika ada).</li>
+              <li>Tamu dilarang menginap tanpa seizin pemilik kost.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group">
+            <h4>2. Pembayaran</h4>
+            <ul>
+              <li>Uang sewa dibayarkan maksimal tanggal due date setiap bulan.</li>
+              <li>Uang sewa yang sudah dibayarkan tidak dapat dikembalikan.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group">
+            <h4>3. Fasilitas &amp; Listrik</h4>
+            <ul>
+              <li>Fasilitas kost hanya untuk digunakan penghuni dan tidak boleh dipinjamkan ke pihak luar tanpa izin.</li>
+              <li>Penghuni wajib merawat fasilitas yang disediakan. Kerusakan akibat kelalaian akan menjadi tanggung jawab penghuni.</li>
+              <li>Setiap kamar dilengkapi meteran listrik prabayar (token). Penghuni bertanggung jawab mengisi token listrik sendiri.</li>
+              <li>Penggunaan listrik sepenuhnya menjadi tanggung jawab masing-masing penghuni.</li>
+              <li>Penggunaan peralatan listrik berdaya tinggi (misalnya: kompor listrik, setrika uap, pemanas air besar, AC portable, dll) wajib seizin pemilik untuk menghindari risiko korsleting atau kebakaran.</li>
+              <li>Penghuni dilarang memaku, mengebor, atau menempelkan benda apa pun di tembok kamar (misalnya paku, double tape, stiker, wallpaper, dll) tanpa izin pemilik.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group">
+            <h4>4. Tamu &amp; Kunjungan</h4>
+            <ul>
+              <li>Tamu hanya diperbolehkan berkunjung sampai pukul 23.00 WIB.</li>
+              <li>Tamu lawan jenis dilarang masuk ke dalam kamar kost kecuali ada izin khusus dari pemilik.</li>
+              <li>Tamu yang menginap dikenakan biaya tambahan sebesar Rp 20.000 per malam dan wajib seizin pemilik.</li>
+              <li>Tanggung jawab atas perilaku tamu berada pada penghuni yang dikunjungi.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group">
+            <h4>5. Kendaraan</h4>
+            <ul>
+              <li>Penghuni yang membawa kendaraan wajib memarkir di area parkir yang telah disediakan.</li>
+              <li>Parkir dilakukan dengan rapi dan tertib agar tidak mengganggu kendaraan lain.</li>
+              <li>Penghuni wajib mematikan mesin, lampu, dan mengunci kendaraannya.</li>
+              <li>Apabila ada iuran parkir atau biaya tambahan, akan diberitahukan oleh pemilik kost.</li>
+              <li>Pemilik kost tidak bertanggung jawab atas kehilangan atau kerusakan kendaraan, segala risiko menjadi tanggung jawab penghuni.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group">
+            <h4>6. Keamanan</h4>
+            <ul>
+              <li>Setiap penghuni wajib mengunci pintu kamar masing-masing, pintu utama, dan pintu gerbang saat keluar.</li>
+              <li>Pemilik kost tidak bertanggung jawab atas kehilangan barang pribadi akibat kelalaian penghuni.</li>
+              <li>Tidak diperbolehkan membawa hewan peliharaan tanpa izin.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group">
+            <h4>7. Sanksi</h4>
+            <ul>
+              <li>Pelanggaran ringan akan diberikan peringatan lisan/tertulis.</li>
+              <li>Pelanggaran berat (misalnya: membawa narkoba, tindak kriminal, merusak fasilitas, dll) akan dikenakan sanksi pengusiran tanpa pengembalian uang sewa maupun deposit.</li>
+            </ul>
+          </div>
+
+          <div class="rule-group rule-special">
+            <h4>8. Pelaporan Mandiri</h4>
+            <p><strong>Khusus penghuni Kost Putri: Alya</strong> wajib melapor secara mandiri kepada RT. 008/09 melalui WA: <strong>081296191356</strong> setelah resmi menjadi penyewa.</p>
+            <p>Pelaporan dilakukan sekali saat awal masa sewa dan setiap ada perubahan data atau keadaan yang perlu diketahui oleh pihak RT.</p>
+            <p>Kepatuhan terhadap klausul ini penting untuk mendukung keamanan dan keteraturan lingkungan.</p>
+          </div>
+
+          <div class="rule-note">
+            <em><strong>Catatan:</strong> Tata tertib ini dapat diperbarui sewaktu-waktu sesuai kebijakan pemilik kost. Dengan menempati kamar, penghuni dianggap setuju dan bersedia mematuhi aturan yang berlaku.</em>
+          </div>
+        </div>
+      </div>
+
+      <label class="agreement-card" style="margin-top:14px">
         <input type="checkbox" name="agreement" required>
         <p class="agreement-text">Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini serta bersedia menerima sanksi apabila melakukan pelanggaran.</p>
       </label>
