@@ -1466,7 +1466,19 @@ function renderDaftarPage() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Formulir Pendaftaran Penghuni | Kost Tiga A</title>
-<meta name="description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya Yogyakarta.">
+<meta name="description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
+<link rel="canonical" href="https://kost-tiga-a.web.id/daftar">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="id_ID">
+<meta property="og:site_name" content="Kost Tiga A">
+<meta property="og:title" content="Formulir Pendaftaran Penghuni | Kost Tiga A">
+<meta property="og:description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
+<meta property="og:url" content="https://kost-tiga-a.web.id/daftar">
+<meta property="og:image" content="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&amp;fit=crop&amp;w=1200&amp;q=85">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Formulir Pendaftaran Penghuni | Kost Tiga A">
+<meta name="twitter:description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
+<meta name="twitter:image" content="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&amp;fit=crop&amp;w=1200&amp;q=85">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="alternate icon" href="/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
