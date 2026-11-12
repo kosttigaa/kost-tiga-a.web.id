@@ -1445,10 +1445,6 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
           <span>Kendaraan Roda Dua / Motor</span>
         </label>
         <label class="radio-item">
-          <input type="radio" name="vehicle" value="Kendaraan Roda Empat / Mobil">
-          <span>Kendaraan Roda Empat / Mobil</span>
-        </label>
-        <label class="radio-item">
           <input type="radio" name="vehicle" value="Tidak Membawa Kendaraan">
           <span>Tidak Membawa Kendaraan</span>
         </label>
