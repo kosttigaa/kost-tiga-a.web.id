@@ -1266,7 +1266,7 @@ function renderDaftarPage() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Formulir Pendaftaran Penghuni | Kost Tiga A</title>
-<meta name="description" content="Formulir resmi pendaftaran calon penghuni Kost Putri Athaya dan Kost Putri Alya Yogyakarta.">
+<meta name="description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya Yogyakarta.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="alternate icon" href="/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -1367,7 +1367,7 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
 <div class="hero-head" id="head-sec">
   <span class="eyebrow">Formulir Resmi</span>
   <h1>Pendaftaran Penghuni</h1>
-  <p class="subtitle">Lengkapi formulir di bawah ini dengan data asli dan valid untuk keperluan administrasi sewa kamar di Kost Putri Athaya atau Kost Putri Alya.</p>
+  <p class="subtitle">Lengkapi formulir di bawah ini dengan data asli dan valid untuk keperluan administrasi sewa kamar di Kost Putri: Athaya atau Kost Putri: Alya.</p>
 </div>
 
 <div class="form-card" id="form-card">
@@ -1377,16 +1377,16 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
       <h2 class="sec-title"><span class="sec-num">1</span> Pilihan Unit Kost</h2>
       <div class="choice-grid">
         <label class="choice-label">
-          <input type="radio" name="kost" value="Kost Putri Athaya" required checked>
+          <input type="radio" name="kost" value="Kost Putri: Athaya" required checked>
           <div class="choice-box">
-            <span class="choice-title">Kost Putri Athaya</span>
+            <span class="choice-title">Kost Putri: Athaya</span>
             <span class="choice-desc">Putri • Kamar AC & Non-AC</span>
           </div>
         </label>
         <label class="choice-label">
-          <input type="radio" name="kost" value="Kost Putri Alya" required>
+          <input type="radio" name="kost" value="Kost Putri: Alya" required>
           <div class="choice-box">
-            <span class="choice-title">Kost Putri Alya</span>
+            <span class="choice-title">Kost Putri: Alya</span>
             <span class="choice-desc">Putri • Kamar AC & Non-AC</span>
           </div>
         </label>
@@ -1651,11 +1651,14 @@ async function handleDaftar(request, response, dataDir) {
   const agreement = String(payload.agreement || "").trim();
   const ktpBase64 = String(payload.ktpImage || "");
 
-  if (!["Kost Putri Athaya", "Kost Putri Alya"].includes(kost)) {
+  const isAthaya = kost.toLowerCase().includes("athaya");
+  const isAlya = kost.toLowerCase().includes("alya");
+  if (!isAthaya && !isAlya) {
     response.writeHead(400, { "Content-Type": "application/json" });
-    response.end(JSON.stringify({ ok: false, error: "Silakan pilih kost yang valid (Kost Putri Athaya atau Kost Putri Alya)." }));
+    response.end(JSON.stringify({ ok: false, error: "Silakan pilih kost yang valid (Kost Putri: Athaya atau Kost Putri: Alya)." }));
     return;
   }
+  const officialKost = isAthaya ? "Kost Putri: Athaya" : "Kost Putri: Alya";
   if (!fullName || fullName.length > 100) {
     response.writeHead(400, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ ok: false, error: "Nama lengkap calon penghuni wajib diisi (maksimal 100 karakter)." }));
@@ -1711,7 +1714,7 @@ async function handleDaftar(request, response, dataDir) {
   const entry = {
     id,
     timestamp: new Date().toISOString(),
-    kost,
+    kost: officialKost,
     fullName,
     nik,
     address,
@@ -1725,17 +1728,16 @@ async function handleDaftar(request, response, dataDir) {
 
   await saveRegistration(dataDir, entry);
 
-  const isAthaya = kost.toLowerCase().includes("athaya");
   const managerPhone = isAthaya ? "628990004926" : "6289679059555";
   const managerName = isAthaya ? "Bu Athaya" : "Mbak Alya";
-  const waText = `Halo Pengelola Kost Tiga A (${managerName}),\nSaya sudah mengisi formulir pendaftaran penghuni baru:\n\n*Nama:* ${fullName}\n*Pilihan Kost:* ${kost}\n*NIK:* ${nik}\n*No. WA:* ${phone}\n*Kendaraan:* ${entry.vehicle}\n*Alamat Asal:* ${address}\n\nMohon konfirmasi pendaftaran saya. Terima kasih!`;
+  const waText = `Halo Pengelola Kost Tiga A (${managerName}),\nSaya sudah mengisi formulir pendaftaran penghuni baru:\n\n*Nama:* ${fullName}\n*Pilihan Kost:* ${officialKost}\n*NIK:* ${nik}\n*No. WA:* ${phone}\n*Kendaraan:* ${entry.vehicle}\n*Alamat Asal:* ${address}\n\nMohon konfirmasi pendaftaran saya. Terima kasih!`;
   const whatsappUrl = `https://wa.me/${managerPhone}?text=${encodeURIComponent(waText)}`;
 
   response.writeHead(200, { "Content-Type": "application/json" });
   response.end(JSON.stringify({
     ok: true,
     id,
-    kost,
+    kost: officialKost,
     fullName,
     managerPhone,
     whatsappUrl,

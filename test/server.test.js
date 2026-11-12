@@ -597,8 +597,8 @@ describe("static website server", () => {
     assert.ok(getDaftar.headers.get("content-security-policy"));
     const html = await getDaftar.text();
     assert.match(html, /Formulir Pendaftaran Penghuni/);
-    assert.match(html, /Kost Putri Athaya/);
-    assert.match(html, /Kost Putri Alya/);
+    assert.match(html, /Kost Putri: Athaya/);
+    assert.match(html, /Kost Putri: Alya/);
 
     // 2. GET /formulir redirects to /daftar
     const redirectRes = await fetch(`${baseUrl}/formulir`, { redirect: "manual" });
@@ -622,7 +622,7 @@ describe("static website server", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        kost: "Kost Putri Alya",
+        kost: "Kost Putri: Alya",
         fullName: "Syifa Kamila",
         nik: "3502104110000001",
         address: "Ponorogo, jawa timur",
@@ -665,7 +665,7 @@ describe("static website server", () => {
       const csvText = await csvRes.text();
       assert.match(csvText, /Syifa Kamila/);
       assert.match(csvText, /'3502104110000001/);
-      assert.match(csvText, /Kost Putri Alya/);
+      assert.match(csvText, /Kost Putri: Alya/);
 
       // 8. Verify dashboard includes #registrations section
       const dashRes = await fetch(`${adminBaseUrl}/admin`, {
