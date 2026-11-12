@@ -515,17 +515,18 @@ function generateRegistrationPdf(entry) {
   }
 
   // Persetujuan box
-  y -= 5;
+  y -= 6;
   add("0.93 0.96 0.94 rg");
-  add(`36 ${y - 28} 523.28 36 re f`);
+  add(`36 ${y - 38} 523.28 44 re f`);
   add("0.13 0.50 0.24 RG 1 w");
-  add(`36 ${y - 28} 523.28 36 re s`);
+  add(`36 ${y - 38} 523.28 44 re s`);
   add("0.08 0.39 0.20 rg");
   add(`BT /F2 8.5 Tf 46 ${y - 4} Td (PERNYATAAN PERSETUJUAN CALON PENGHUNI (TELAH DISETUJUI SECARA DIGITAL):) Tj ET`);
-  add(`BT /F1 8 Tf 46 ${y - 18} Td ("Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini serta bersedia menerima sanksi apabila melakukan pelanggaran.") Tj ET`);
+  add(`BT /F1 8 Tf 46 ${y - 18} Td ("Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini,) Tj ET`);
+  add(`BT /F1 8 Tf 46 ${y - 30} Td (serta bersedia menerima sanksi apabila melakukan pelanggaran.") Tj ET`);
 
   // Footer / Signatures
-  y -= 48;
+  y -= 54;
   add("0.427 0.443 0.416 rg");
   add(`BT /F1 8 Tf 46 ${y} Td (Calon Penghuni:) Tj ET`);
   add(`BT /F2 9 Tf 46 ${y - 28} Td (${escapePdf(entry.fullName)}) Tj ET`);
