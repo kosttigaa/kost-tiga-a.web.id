@@ -428,13 +428,23 @@ function generateRegistrationPdf(entry) {
   add("q");
   // Header background bar (#354c3f)
   add("0.208 0.298 0.247 rg");
-  add("0 770 595.28 72 re f");
+  add("0 766 595.28 76 re f");
 
-  // Title
+  // Mandatory 3A Brand Mark Badge (Rounded rect: x=36, y=778, w=48, h=48, r=10)
+  add("0.843 0.839 0.631 rg"); // #d7d6a1
+  add("0.208 0.259 0.224 RG"); // #354239
+  add("1.5 w");
+  add("46 778 m 74 778 l 79.52 778 84 782.48 84 788 c 84 816 l 84 821.52 79.52 826 74 826 c 46 826 l 40.48 826 36 821.52 36 816 c 36 788 l 36 782.48 40.48 778 46 778 c B");
+
+  // 3A text inside badge
+  add("0.133 0.188 0.157 rg");
+  add("BT /F2 21 Tf 46.5 795 Td (3A) Tj ET");
+
+  // Title beside 3A brand mark
   add("1 1 1 rg");
-  add("BT /F2 18 Tf 36 812 Td (KOST TIGA A) Tj ET");
-  add("BT /F1 10 Tf 36 794 Td (FORMULIR BUKTI PENDAFTARAN & PERSETUJUAN SEWA) Tj ET");
-  add("BT /F1 9 Tf 390 794 Td (Dokumen Resmi Sistem Online) Tj ET");
+  add("BT /F2 17 Tf 96 812 Td (KOST TIGA A) Tj ET");
+  add("BT /F1 9.5 Tf 96 794 Td (FORMULIR BUKTI PENDAFTARAN & PERSETUJUAN SEWA) Tj ET");
+  add("BT /F1 8.5 Tf 410 794 Td (Dokumen Resmi Sistem Online) Tj ET");
 
   // Info Box
   add("0.965 0.953 0.922 rg");
