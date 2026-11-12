@@ -1542,6 +1542,7 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
             <h4>7. Sanksi</h4>
             <ul>
               <li>Pelanggaran ringan akan diberikan peringatan lisan/tertulis.</li>
+              <li>Kehilangan kunci kost dikenakan biaya duplikasi/penggantian kunci sebesar Rp 100.000,-.</li>
               <li>Pelanggaran berat (misalnya: membawa narkoba, tindak kriminal, merusak fasilitas, dll) akan dikenakan sanksi pengusiran tanpa pengembalian uang sewa maupun deposit.</li>
             </ul>
           </div>
