@@ -639,9 +639,19 @@ describe("static website server", () => {
     assert.equal(postJson.ok, true);
     assert.equal(postJson.managerPhone, "6289679059555");
     assert.match(postJson.whatsappUrl, /wa\.me\/6289679059555/);
+    assert.ok(postJson.pdfUrl);
+
+    // 4b. Test public PDF download by registrant
+    const publicPdfRes = await fetch(`${baseUrl}${postJson.pdfUrl}`);
+    assert.equal(publicPdfRes.status, 200);
+    assert.match(publicPdfRes.headers.get("content-type"), /application\/pdf/);
+    const pdfBytes = await publicPdfRes.arrayBuffer();
+    assert.ok(pdfBytes.byteLength > 1000);
+    assert.equal(Buffer.from(pdfBytes).subarray(0, 8).toString(), "%PDF-1.4");
 
     // 5. Upload protection
     const ktpFilename = `${postJson.id}-ktp.jpg`;
+    const pdfFilename = `${postJson.id}-bukti.pdf`;
     const unauthKtp = await fetch(`${baseUrl}/admin/uploads/${ktpFilename}`);
     assert.ok(unauthKtp.status === 401 || unauthKtp.status === 503);
 
@@ -656,6 +666,12 @@ describe("static website server", () => {
       assert.equal(authKtp.status, 200);
       assert.equal(authKtp.headers.get("content-type"), "image/jpeg");
 
+      const authPdf = await fetch(`${adminBaseUrl}/admin/uploads/${pdfFilename}`, {
+        headers: { "X-Admin-Secret": "secret-key" },
+      });
+      assert.equal(authPdf.status, 200);
+      assert.match(authPdf.headers.get("content-type"), /application\/pdf/);
+
       // 7. Verify registrations CSV export
       const csvRes = await fetch(`${adminBaseUrl}/admin?data=registrations_csv`, {
         headers: { "X-Admin-Secret": "secret-key" },
@@ -666,8 +682,9 @@ describe("static website server", () => {
       assert.match(csvText, /Syifa Kamila/);
       assert.match(csvText, /'3502104110000001/);
       assert.match(csvText, /Kost Putri: Alya/);
+      assert.match(csvText, /bukti\.pdf/);
 
-      // 8. Verify dashboard includes #registrations section
+      // 8. Verify dashboard includes #registrations section and PDF link
       const dashRes = await fetch(`${adminBaseUrl}/admin`, {
         headers: { "X-Admin-Secret": "secret-key" },
       });
@@ -675,6 +692,7 @@ describe("static website server", () => {
       const dashHtml = await dashRes.text();
       assert.match(dashHtml, /id="registrations"/);
       assert.match(dashHtml, /Syifa Kamila/);
+      assert.match(dashHtml, /Unduh PDF/);
     } finally {
       await closeTestServer(adminServer);
     }

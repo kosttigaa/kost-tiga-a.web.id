@@ -408,6 +408,168 @@ async function saveRegistration(dataDir, entry) {
   return task;
 }
 
+
+function escapePdf(text) {
+  return String(text ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
+function truncatePdf(text, max = 75) {
+  const str = String(text ?? "").trim();
+  return str.length > max ? str.slice(0, max - 3) + "..." : str;
+}
+
+function generateRegistrationPdf(entry) {
+  const lines = [];
+  const add = (cmd) => lines.push(cmd);
+
+  add("q");
+  // Header background bar (#354c3f)
+  add("0.208 0.298 0.247 rg");
+  add("0 770 595.28 72 re f");
+
+  // Title
+  add("1 1 1 rg");
+  add("BT /F2 18 Tf 36 812 Td (KOST TIGA A) Tj ET");
+  add("BT /F1 10 Tf 36 794 Td (FORMULIR BUKTI PENDAFTARAN & PERSETUJUAN SEWA) Tj ET");
+  add("BT /F1 9 Tf 390 794 Td (Dokumen Resmi Sistem Online) Tj ET");
+
+  // Info Box
+  add("0.965 0.953 0.922 rg");
+  add("36 710 523.28 44 re f");
+  add("0.910 0.882 0.820 RG");
+  add("1 w 36 710 523.28 44 re s");
+
+  add("0.141 0.176 0.161 rg");
+  add(`BT /F2 9.5 Tf 46 736 Td (ID Pendaftaran: ${escapePdf(entry.id)}) Tj ET`);
+  add(`BT /F1 8.5 Tf 46 720 Td (Waktu Submit: ${escapePdf(entry.timestampWib)}) Tj ET`);
+  add(`BT /F2 9.5 Tf 330 736 Td (Pilihan Unit: ${escapePdf(entry.kost)}) Tj ET`);
+  add(`BT /F1 8.5 Tf 330 720 Td (Status: Menunggu Konfirmasi WhatsApp) Tj ET`);
+
+  // Section 1: Data Calon Penghuni
+  add("0.208 0.298 0.247 rg");
+  add("BT /F2 11 Tf 36 685 Td (1. IDENTITAS CALON PENGHUNI) Tj ET");
+  add("0.8 0.8 0.8 RG 0.5 w 36 678 m 559.28 678 l S");
+
+  const fields1 = [
+    ["Nama Lengkap", entry.fullName],
+    ["NIK (KTP)", entry.nik],
+    ["Nomor WhatsApp", entry.phone],
+    ["Kendaraan", entry.vehicle || "Tidak Membawa Kendaraan"],
+    ["Alamat Asal", truncatePdf(entry.address, 72)],
+  ];
+
+  let y = 660;
+  for (const [label, val] of fields1) {
+    add("0.427 0.443 0.416 rg");
+    add(`BT /F2 9 Tf 46 ${y} Td (${escapePdf(label)}:) Tj ET`);
+    add("0.141 0.176 0.161 rg");
+    add(`BT /F1 9 Tf 160 ${y} Td (${escapePdf(val)}) Tj ET`);
+    y -= 15;
+  }
+
+  // Section 2: Kontak Darurat
+  y -= 4;
+  add("0.208 0.298 0.247 rg");
+  add(`BT /F2 11 Tf 36 ${y} Td (2. KONTAK DARURAT (ORANG TUA / WALI)) Tj ET`);
+  add(`0.8 0.8 0.8 RG 0.5 w 36 ${y - 7} m 559.28 ${y - 7} l S`);
+
+  y -= 21;
+  const fields2 = [
+    ["Nama Orang Tua / Wali", entry.guardianName],
+    ["No. WhatsApp Wali", entry.guardianPhone],
+  ];
+  for (const [label, val] of fields2) {
+    add("0.427 0.443 0.416 rg");
+    add(`BT /F2 9 Tf 46 ${y} Td (${escapePdf(label)}:) Tj ET`);
+    add("0.141 0.176 0.161 rg");
+    add(`BT /F1 9 Tf 160 ${y} Td (${escapePdf(val)}) Tj ET`);
+    y -= 15;
+  }
+
+  // Section 3: Tata Tertib
+  y -= 4;
+  add("0.208 0.298 0.247 rg");
+  add(`BT /F2 11 Tf 36 ${y} Td (3. KETENTUAN & TATA TERTIB SEWA KOST) Tj ET`);
+  add(`0.8 0.8 0.8 RG 0.5 w 36 ${y - 7} m 559.28 ${y - 7} l S`);
+
+  y -= 16;
+  const rules = [
+    "1. Umum: Wajib menjaga ketertiban, kebersihan, keamanan. Dilarang narkoba, miras, sajam. Dilarang merokok di kamar/selasar.",
+    "2. Pembayaran: Uang sewa dibayarkan maksimal tanggal due date. Uang sewa yang sudah dibayar tidak dapat dikembalikan.",
+    "3. Fasilitas & Listrik: Rawat fasilitas kost. Meteran token prabayar mandiri. Dilarang memaku/menempel tembok tanpa izin.",
+    "4. Tamu: Maksimal kunjungan pk 23.00 WIB. Lawan jenis dilarang masuk kamar. Tamu menginap Rp 20.000/malam (izin pemilik).",
+    "5. Kendaraan: Parkir tertib di area yang disediakan, kunci ganda, dan matikan mesin. Kehilangan menjadi risiko penyewa.",
+    "6. Keamanan: Kunci pintu kamar, pintu utama, dan gerbang saat keluar. Hewan peliharaan dilarang tanpa izin.",
+    "7. Sanksi: Pelanggaran ringan diberi peringatan. Pelanggaran berat dikenakan sanksi pengusiran tanpa pengembalian uang.",
+    "   * KHUSUS KEHILANGAN KUNCI: Dikenakan biaya duplikasi/penggantian kunci sebesar Rp 100.000,-.",
+    "8. Pelaporan Mandiri: Khusus Kost Putri: Alya wajib melapor ke RT 008/09 via WA: 081296191356 setelah resmi menyewa.",
+  ];
+
+  for (const rule of rules) {
+    add("0.25 0.25 0.25 rg");
+    add(`BT /F1 7.5 Tf 46 ${y} Td (${escapePdf(rule)}) Tj ET`);
+    y -= 12.5;
+  }
+
+  // Persetujuan box
+  y -= 5;
+  add("0.93 0.96 0.94 rg");
+  add(`36 ${y - 28} 523.28 36 re f`);
+  add("0.13 0.50 0.24 RG 1 w");
+  add(`36 ${y - 28} 523.28 36 re s`);
+  add("0.08 0.39 0.20 rg");
+  add(`BT /F2 8.5 Tf 46 ${y - 4} Td (PERNYATAAN PERSETUJUAN CALON PENGHUNI (TELAH DISETUJUI SECARA DIGITAL):) Tj ET`);
+  add(`BT /F1 8 Tf 46 ${y - 18} Td ("Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini serta bersedia menerima sanksi apabila melakukan pelanggaran.") Tj ET`);
+
+  // Footer / Signatures
+  y -= 48;
+  add("0.427 0.443 0.416 rg");
+  add(`BT /F1 8 Tf 46 ${y} Td (Calon Penghuni:) Tj ET`);
+  add(`BT /F2 9 Tf 46 ${y - 28} Td (${escapePdf(entry.fullName)}) Tj ET`);
+  add(`BT /F1 7.5 Tf 46 ${y - 40} Td (Telah diverifikasi via NIK: ${escapePdf(entry.nik)}) Tj ET`);
+
+  add(`BT /F1 8 Tf 360 ${y} Td (Pengelola Kost Tiga A:) Tj ET`);
+  add(`BT /F2 9 Tf 360 ${y - 28} Td (${escapePdf(entry.kost)}) Tj ET`);
+  add(`BT /F1 7.5 Tf 360 ${y - 40} Td (https://kost-tiga-a.web.id) Tj ET`);
+
+  add("Q");
+
+  const streamContent = lines.join("\n");
+  const streamLength = Buffer.byteLength(streamContent, "latin1");
+
+  const objects = [];
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
+  objects[3] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>";
+  objects[4] = `<< /Length ${streamLength} >>\nstream\n${streamContent}\nendstream`;
+  objects[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objects[6] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+
+  let out = "%PDF-1.4\n";
+  const offsets = [];
+  for (let i = 1; i <= 6; i++) {
+    offsets[i] = Buffer.byteLength(out, "latin1");
+    out += `${i} 0 obj\n${objects[i]}\nendobj\n`;
+  }
+  const xrefOffset = Buffer.byteLength(out, "latin1");
+  out += "xref\n";
+  out += "0 7\n";
+  out += "0000000000 65535 f \n";
+  for (let i = 1; i <= 6; i++) {
+    out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
+  }
+  out += "trailer\n";
+  out += "<< /Size 7 /Root 1 0 R >>\n";
+  out += "startxref\n";
+  out += `${xrefOffset}\n`;
+  out += "%%EOF\n";
+
+  return Buffer.from(out, "latin1");
+}
+
 async function saveKtpImage(dataDir, id, base64Data) {
   const uploadsDir = path.join(dataDir, "uploads");
   await mkdir(uploadsDir, { recursive: true });
@@ -881,6 +1043,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       "No WA Orang Tua / Wali",
       "Kendaraan",
       "Foto KTP",
+      "Arsip PDF",
       "Persetujuan Tata Tertib",
     ];
     const escapeCsv = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
@@ -895,6 +1058,7 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       `'${r.guardianPhone}`,
       r.vehicle || "-",
       r.ktpImage ? `${basePath}/uploads/${r.ktpImage}` : "-",
+      r.pdfFile ? `${basePath}/uploads/${r.pdfFile}` : (r.id ? `${basePath}/uploads/${r.id}-bukti.pdf` : "-"),
       r.agreement,
     ]);
     const csvData = "\uFEFF" + [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
@@ -1039,6 +1203,11 @@ function renderRegistrationsSection(registrations, basePath = "/admin") {
             ? `<a href="https://wa.me/${waliWaPhone}" target="_blank" rel="noopener noreferrer" class="wa-link">${escapeHtml(r.guardianPhone)}</a>`
             : escapeHtml(r.guardianPhone);
 
+          const pdfFile = r.pdfFile || (r.id ? `${r.id}-bukti.pdf` : "");
+          const pdfLink = pdfFile
+            ? `<a href="${basePath}/uploads/${encodeURIComponent(pdfFile)}" target="_blank" rel="noopener noreferrer" class="ktp-btn">Unduh PDF</a>`
+            : "-";
+
           return `<tr>
 <td class="time">${escapeHtml(time)}</td>
 <td><strong>${escapeHtml(r.kost)}</strong></td>
@@ -1049,10 +1218,11 @@ function renderRegistrationsSection(registrations, basePath = "/admin") {
 <td>${escapeHtml(r.address)}</td>
 <td>${escapeHtml(r.vehicle || "-")}</td>
 <td>${ktpLink}</td>
+<td>${pdfLink}</td>
 </tr>`;
         })
         .join("")
-    : `<tr><td class="empty" colspan="9">Belum ada data pendaftaran penghuni.</td></tr>`;
+    : `<tr><td class="empty" colspan="10">Belum ada data pendaftaran penghuni.</td></tr>`;
 
   return `<section id="registrations" class="dashboard-section" aria-labelledby="reg-title" hidden>
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px">
@@ -1077,6 +1247,7 @@ function renderRegistrationsSection(registrations, basePath = "/admin") {
   <th scope="col">Alamat Asal</th>
   <th scope="col">Kendaraan</th>
   <th scope="col">KTP</th>
+  <th scope="col">Arsip PDF</th>
 </tr></thead>
 <tbody id="reg-entries">
 ${rows}
@@ -1243,11 +1414,29 @@ form.addEventListener("submit", async function(e) {
     formCard.style.display = "none";
     headSec.style.display = "none";
     document.getElementById("sum-name").textContent = fullName;
-    document.getElementById("sum-kost").textContent = kost;
+    document.getElementById("sum-kost").textContent = data.kost || kost;
     document.getElementById("sum-nik").textContent = nik;
     document.getElementById("sum-phone").textContent = phone;
     document.getElementById("sum-vehicle").textContent = vehicle;
     document.getElementById("wa-link-btn").href = data.whatsappUrl;
+
+    if (data.pdfUrl) {
+      const pdfBtn = document.getElementById("pdf-download-btn");
+      if (pdfBtn) {
+        pdfBtn.href = data.pdfUrl;
+        pdfBtn.setAttribute("download", "Bukti-Pendaftaran-" + fullName.replace(/[^\\w\\s-]/g, "").trim().replace(/\\s+/g, "-") + ".pdf");
+      }
+      // Auto-trigger download
+      try {
+        const dlLink = document.createElement("a");
+        dlLink.href = data.pdfUrl;
+        dlLink.download = "Bukti-Pendaftaran-" + fullName.replace(/[^\\w\\s-]/g, "").trim().replace(/\\s+/g, "-") + ".pdf";
+        document.body.appendChild(dlLink);
+        dlLink.click();
+        dlLink.remove();
+      } catch (dlErr) {}
+    }
+
     successScreen.style.display = "block";
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
@@ -1350,6 +1539,9 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
 .summary-row:last-child{border-bottom:0}
 .summary-label{color:var(--muted)}
 .summary-val{font-weight:700;color:var(--ink);text-align:right}
+.pdf-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:46px;padding:12px 20px;border-radius:12px;background:#fff;border:1.5px solid var(--blue-dark);color:var(--blue-dark);font-family:inherit;font-size:14px;font-weight:800;text-decoration:none;transition:all .15s ease}
+.pdf-btn:hover{background:var(--cream);border-color:#d8cba9}
+.pdf-btn svg{width:20px;height:20px}
 .wa-confirm-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:48px;padding:12px 24px;border-radius:12px;background:#25d366;color:#fff;font-family:inherit;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 4px 12px rgba(37,211,102,0.3);transition:all .15s ease}
 .wa-confirm-btn:hover{background:#1ebc59;transform:translateY(-1px)}
 .wa-confirm-btn svg{width:22px;height:22px;fill:currentColor}
@@ -1585,10 +1777,16 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
     <div class="summary-row"><span class="summary-label">Kendaraan</span><span class="summary-val" id="sum-vehicle">-</span></div>
   </div>
 
-  <a id="wa-link-btn" href="#" target="_blank" rel="noopener noreferrer" class="wa-confirm-btn">
-    <svg viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.23 8.23 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/></svg>
-    <span>Konfirmasi ke Pengelola via WhatsApp</span>
-  </a>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px">
+    <a id="pdf-download-btn" href="#" class="pdf-btn" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg>
+      <span>Unduh Ulang Bukti Pendaftaran (PDF)</span>
+    </a>
+    <a id="wa-link-btn" href="#" target="_blank" rel="noopener noreferrer" class="wa-confirm-btn">
+      <svg viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.23 8.23 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/></svg>
+      <span>Konfirmasi ke Pengelola via WhatsApp</span>
+    </a>
+  </div>
   <div>
     <a href="/" class="back-link">Kembali ke Halaman Utama</a>
   </div>
@@ -1711,6 +1909,33 @@ async function handleDaftar(request, response, dataDir) {
     return;
   }
 
+  const timestampWib = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "long",
+    timeStyle: "medium",
+  }).format(new Date()) + " WIB";
+
+  const pdfFilename = `${id}-bukti.pdf`;
+  try {
+    const pdfBuffer = generateRegistrationPdf({
+      id,
+      timestampWib,
+      kost: officialKost,
+      fullName,
+      nik,
+      address,
+      phone,
+      guardianName,
+      guardianPhone,
+      vehicle: vehicle || "Tidak Membawa Kendaraan",
+    });
+    const uploadsDir = path.join(dataDir, "uploads");
+    await mkdir(uploadsDir, { recursive: true });
+    await writeFile(path.join(uploadsDir, pdfFilename), pdfBuffer);
+  } catch (pdfErr) {
+    console.error("Failed to generate registration PDF:", pdfErr);
+  }
+
   const entry = {
     id,
     timestamp: new Date().toISOString(),
@@ -1722,6 +1947,7 @@ async function handleDaftar(request, response, dataDir) {
     guardianName,
     guardianPhone,
     ktpImage: ktpFilename,
+    pdfFile: pdfFilename,
     vehicle: vehicle || "Tidak Membawa Kendaraan",
     agreement: typeof agreement === "boolean" ? "Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini serta bersedia menerima sanksi apabila melakukan pelanggaran." : agreement,
   };
@@ -1741,8 +1967,49 @@ async function handleDaftar(request, response, dataDir) {
     fullName,
     managerPhone,
     whatsappUrl,
+    pdfUrl: `/daftar/pdf/${pdfFilename}`,
     message: "Pendaftaran berhasil disimpan!",
   }));
+}
+
+
+async function handlePublicPdfDownload(request, response, dataDir) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
+    return;
+  }
+  const url = new URL(request.url, "http://localhost");
+  const filename = path.basename(url.pathname);
+  if (!filename || !/^reg_\d+_[a-zA-Z0-9]+-bukti\.pdf$/.test(filename)) {
+    sendError(response, 404, "Not Found");
+    return;
+  }
+  const filePath = path.join(dataDir, "uploads", filename);
+  try {
+    const fileStat = await stat(filePath);
+    if (!fileStat.isFile()) {
+      sendError(response, 404, "Not Found");
+      return;
+    }
+    response.writeHead(200, {
+      "Content-Type": "application/pdf",
+      "Content-Length": fileStat.size,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, max-age=3600",
+      "X-Content-Type-Options": "nosniff",
+    });
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
+    createReadStream(filePath).pipe(response);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      sendError(response, 404, "Not Found");
+      return;
+    }
+    sendError(response, 500, "Internal Server Error");
+  }
 }
 
 async function handleKtpDownload(request, response, dataDir, auth, sessions) {
@@ -1767,8 +2034,9 @@ async function handleKtpDownload(request, response, dataDir, auth, sessions) {
       sendError(response, 404, "Not Found");
       return;
     }
+    const contentType = filename.endsWith(".pdf") ? "application/pdf" : "image/jpeg";
     response.writeHead(200, {
-      "Content-Type": "image/jpeg",
+      "Content-Type": contentType,
       "Content-Length": fileStat.size,
       "Cache-Control": "private, max-age=3600",
       "X-Content-Type-Options": "nosniff",
@@ -2302,6 +2570,8 @@ export function createServer({
       handler = handleVisitors(request, response, visitorStore);
     } else if (pathname === "/api/rooms") {
       handler = handleRooms(request, response, dataDir);
+    } else if (pathname.startsWith("/daftar/pdf/")) {
+      handler = handlePublicPdfDownload(request, response, dataDir);
     } else if (pathname === "/daftar" || pathname === "/daftar/") {
       handler = handleDaftar(request, response, dataDir);
     } else if (pathname === "/formulir" || pathname === "/formulir/") {
