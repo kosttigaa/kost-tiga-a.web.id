@@ -73,16 +73,37 @@ Tambahkan nilai tersebut secara privat lewat `sudo systemctl edit kost-tiga-a`; 
 
 Deploy memakai key SSH Ed25519 khusus di `~/.ssh/kost-tiga-a-admin` (tanpa passphrase agar skrip dapat berjalan tanpa prompt). Pasang isi file `~/.ssh/kost-tiga-a-admin.pub` ke `~admin/.ssh/authorized_keys` di VPS melalui akses admin/console. Jangan salin atau bagikan file private key `kost-tiga-a-admin`; lindungi file tersebut dengan izin akun Windows Anda.
 
-Di VPS, aplikasi berjalan sebagai proses PM2 `kost-tiga-a` milik user `admin`. `deploy.ps1` me-restart proses itu dengan `pm2 restart kost-tiga-a`, lalu memastikan `http://127.0.0.1:3000/` merespons. Atur environment variable (mis. `ADMIN_USER`, `ADMIN_PASSWORD`) lewat konfigurasi PM2, bukan di repository.
+Di VPS, website utama berjalan sebagai proses PM2 `kost-tiga-a` (port 3000), dan backend API dashboard berjalan sebagai proses PM2 `dashboard-kost` (port 5000) milik user `admin`. `deploy.ps1` me-restart proses-proses tersebut secara otomatis.
 
 ```nginx
-location /dashboard {
-    proxy_set_header X-Real-IP $remote_addr;
+# Dashboard API
+location ^~ /dashboard/api/ {
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_pass http://127.0.0.1:3000;
+    rewrite ^/dashboard(/api/.*)$ $1 break;
+    proxy_pass http://127.0.0.1:5000;
 }
 
+# Dashboard static assets
+location ^~ /dashboard/assets/ {
+    alias /var/www/kost-tiga-a.web.id/dashboard/dist/assets/;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# Dashboard React SPA
+location /dashboard/ {
+    alias /var/www/kost-tiga-a.web.id/dashboard/dist/;
+    index index.html;
+    try_files $uri $uri/ /dashboard/index.html;
+}
+
+location = /dashboard {
+    return 301 /dashboard/;
+}
 ```
 
 `admin-logs.html` lama hanya mengarahkan ke `/dashboard#logs` jika masih disajikan langsung oleh konfigurasi Nginx lama. Hapus konfigurasi Nginx lama yang secara langsung menyajikan halaman log atau menambahkan `X-Admin-Secret`; location lama dapat mengambil alih permintaan sebelum Node menerimanya. Setelah perubahan, uji dengan `sudo nginx -t` lalu reload Nginx.
