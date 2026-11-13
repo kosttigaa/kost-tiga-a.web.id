@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Manrope:wght@600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Manrope", sans-serif;
+
+  /* Brand Palette from kost-tiga-a.web.id */
+  --color-paper: #f6f3eb;
+  --color-white: #fffdf8;
+  --color-ink: #242d29;
+  --color-muted: #6d716a;
+  --color-line: #e8e1d1;
+  --color-blue: #526b5b;
+  --color-blue-dark: #354c3f;
+  --color-night: #1f3028;
+  --color-acid: #d8c391;
+  --color-lilac: #eeeadf;
+  --color-purple: #8d7953;
+  --color-coral: #b97862;
+
+  /* Harmonized Slate (warm ivory / sand / charcoal) */
+  --color-slate-50: #f6f3eb;
+  --color-slate-100: #eeeadf;
+  --color-slate-200: #e8e1d1;
+  --color-slate-300: #d8cba9;
+  --color-slate-400: #9c978b;
+  --color-slate-500: #6d716a;
+  --color-slate-600: #515651;
+  --color-slate-700: #3c4540;
+  --color-slate-800: #2c3530;
+  --color-slate-900: #242d29;
+
+  /* Harmonized Indigo -> Dark Forest / Pine */
+  --color-indigo-50: #eeeadf;
+  --color-indigo-100: #e2dbca;
+  --color-indigo-200: #d8c391;
+  --color-indigo-300: #bca878;
+  --color-indigo-400: #718d7b;
+  --color-indigo-500: #526b5b;
+  --color-indigo-600: #354c3f;
+  --color-indigo-700: #263b30;
+  --color-indigo-800: #1f3028;
+  --color-indigo-900: #17251e;
+
+  /* Harmonized Emerald (natural leaf green) */
+  --color-emerald-50: #f0f5f1;
+  --color-emerald-100: #dbe8dd;
+  --color-emerald-600: #3f6e52;
+  --color-emerald-700: #2e533d;
+  --color-emerald-800: #1f3b2a;
+
+  /* Harmonized Rose -> Terracotta / Coral */
+  --color-rose-50: #fdf5f2;
+  --color-rose-100: #f8e5de;
+  --color-rose-600: #b97862;
+  --color-rose-700: #9e5f4b;
+  --color-rose-800: #814634;
+
+  /* Harmonized Amber -> Warm Ochre / Brass */
+  --color-amber-50: #faf7ed;
+  --color-amber-100: #f4ecdb;
+  --color-amber-600: #a98b52;
+  --color-amber-700: #8c713e;
+  --color-amber-800: #71582c;
+}
+
+html {
+  min-width: 320px;
+  background: #f6f3eb;
+  color-scheme: light;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(ellipse at 14% 8%, rgb(82 107 91 / 7%), transparent 30rem),
+              radial-gradient(ellipse at 88% 42%, rgb(216 195 145 / 10%), transparent 32rem),
+              #f6f3eb;
+  color: #242d29;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.025em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: #242d29 !important;
+  }
+
+  /* Sembunyikan elemen dashboard selain kuitansi saat print */
+  header,
+  nav,
+  main,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  #receipt-area {
+    border: 2px dashed #bca878 !important;
+    background: #fffdf8 !important;
+    box-shadow: none !important;
+    padding: 24px !important;
+    margin: 20px auto !important;
+    max-width: 420px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .brand-logo-print {
+    background: #d7d6a1 !important;
+    border-color: #242d29 !important;
+    color: #242d29 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "clicks": "node scripts/clicks.js",
-    "test": "node --test"
+    "test": "node --test",
+    "dashboard:dev": "npm --prefix dashboard run dev",
+    "dashboard:build": "npm --prefix dashboard run build",
+    "dashboard:api": "npm --prefix dashboard run api"
   },
   "engines": {
     "node": ">=22"

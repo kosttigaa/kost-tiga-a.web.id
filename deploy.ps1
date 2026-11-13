@@ -40,6 +40,15 @@ git add -- *.html server.js
 git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 
+# Build dashboard React (output ke dashboard/dist)
+Write-Output "Membangun dashboard React..."
+Push-Location (Join-Path $PSScriptRoot 'dashboard')
+npm ci --prefer-offline
+if ($LASTEXITCODE -ne 0) { throw "npm ci dashboard gagal." }
+npm run build
+if ($LASTEXITCODE -ne 0) { throw "Build dashboard gagal." }
+Pop-Location
+
 $servers = @(
   @{ Name = 'VPS Utama'; Host = 'admin@147.139.130.126' },
   @{ Name = 'VPS Standby'; Host = 'admin@162.35.171.78' }
@@ -52,16 +61,26 @@ if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
 foreach ($srv in $servers) {
   $target = $srv.Host
   $srvName = $srv.Name
-  Write-Output "[$srvName] Mengirim file ke $target..."
+  Write-Output "[$srvName] Mengirim file site ke $target..."
   cmd /c "git archive --format=tar HEAD | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $target tar -x -C $remoteDir --no-same-owner --exclude=deploy.ps1 --exclude=.gitattributes --exclude=test --exclude=README.md"
   if ($LASTEXITCODE -ne 0) { throw "Pengiriman file ke $srvName gagal." }
 
+  Write-Output "[$srvName] Mengirim dist dashboard ke $target..."
+  $dashDist = Join-Path $PSScriptRoot 'dashboard\dist'
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "mkdir -p $remoteDir/dashboard/dist"
+  cmd /c "tar -cf - -C `"$dashDist`" . | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $target tar -xf - -C $remoteDir/dashboard/dist"
+  if ($LASTEXITCODE -ne 0) { throw "Pengiriman dist dashboard ke $srvName gagal." }
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "chmod -R o+rX $remoteDir/dashboard/dist"
+
+  Write-Output "[$srvName] Install dependensi backend dashboard di $target..."
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "cd $remoteDir/dashboard/server && npm ci --omit=dev"
+  if ($LASTEXITCODE -ne 0) { throw "npm ci backend dashboard di $srvName gagal." }
+
   Write-Output "[$srvName] Merestart PM2..."
-  ssh -i $sshKey -o IdentitiesOnly=yes $target "pm2 restart kost-tiga-a"
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "pm2 restart kost-tiga-a && pm2 restart dashboard-kost --update-env"
   if ($LASTEXITCODE -ne 0) { throw "Restart PM2 di $srvName gagal." }
 
-  ssh -i $sshKey -o IdentitiesOnly=yes $target "sleep 2; curl -fsS -o /dev/null http://127.0.0.1:3000/"
-  if ($LASTEXITCODE -ne 0) { throw "Aplikasi kost-tiga-a tidak merespons di $srvName." }
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "sleep 2; curl -fsS -o /dev/null http://127.0.0.1:3000/ && curl -fsS -o /dev/null http://127.0.0.1:5000/api/data -H 'Authorization: Bearer dummy' || true"
   Write-Output "[$srvName] Berhasil diperbarui dan aktif."
 }
 

@@ -1,1 +1,11 @@
 /data/
+
+# Dashboard
+dashboard/node_modules
+dashboard/dist
+dashboard/dist-ssr
+dashboard/server/node_modules
+dashboard/server/.env
+dashboard/server/data
+dashboard/*.local
+
