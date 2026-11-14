@@ -21,7 +21,7 @@ if (-not $branch) {
 }
 
 $wib = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'SE Asia Standard Time')
-$months = 'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'
+$months = 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 $iso = $wib.ToString("yyyy-MM-dd'T'HH:mm:ss") + '+07:00'
 $label = '{0} {1} {2}, {3} WIB' -f $wib.Day, $months[$wib.Month - 1], $wib.Year, $wib.ToString('HH:mm:ss')
 $replacement = "Terakhir diperbarui: <time datetime=`"$iso`">$label</time>"
