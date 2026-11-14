@@ -1,7 +1,8 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { appendFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
+import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompress, constants as zlibConstants, gzip } from "node:zlib";
@@ -403,6 +404,81 @@ async function saveRegistration(dataDir, entry) {
   const task = regWriteQueue.then(async () => {
     await mkdir(dataDir, { recursive: true });
     await appendFile(path.join(dataDir, "registrations.jsonl"), JSON.stringify(entry) + "\n", "utf8");
+
+    // Simpan ke database SQLite kost.db
+    try {
+      const dbPath = path.join(publicRoot, "dashboard", "server", "data", "kost.db");
+      if (existsSync(dbPath)) {
+        const db = new DatabaseSync(dbPath);
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS registrations (
+            id TEXT PRIMARY KEY,
+            seq INTEGER NOT NULL,
+            kost TEXT,
+            full_name TEXT,
+            nik TEXT,
+            phone TEXT,
+            address TEXT,
+            guardian_name TEXT,
+            guardian_phone TEXT,
+            vehicle TEXT,
+            ktp_image TEXT,
+            pdf_file TEXT,
+            status TEXT,
+            date TEXT,
+            note TEXT,
+            extra TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL
+          )
+        `);
+        const countRow = db.prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS nextSeq FROM registrations").get();
+        const nextSeq = countRow ? countRow.nextSeq : 1;
+        const stmt = db.prepare(`
+          INSERT INTO registrations (
+            id, seq, kost, full_name, nik, phone, address,
+            guardian_name, guardian_phone, vehicle, ktp_image, pdf_file,
+            status, date, note, extra, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            kost = excluded.kost,
+            full_name = excluded.full_name,
+            nik = excluded.nik,
+            phone = excluded.phone,
+            address = excluded.address,
+            guardian_name = excluded.guardian_name,
+            guardian_phone = excluded.guardian_phone,
+            vehicle = excluded.vehicle,
+            ktp_image = excluded.ktp_image,
+            pdf_file = excluded.pdf_file,
+            extra = excluded.extra,
+            updated_at = excluded.updated_at
+        `);
+        const now = new Date().toISOString();
+        const dateStr = entry.timestamp ? entry.timestamp.slice(0, 10) : now.slice(0, 10);
+        stmt.run(
+          entry.id,
+          nextSeq,
+          entry.kost || null,
+          entry.fullName || null,
+          entry.nik || null,
+          entry.phone || null,
+          entry.address || null,
+          entry.guardianName || null,
+          entry.guardianPhone || null,
+          entry.vehicle || null,
+          entry.ktpImage || null,
+          entry.pdfFile || null,
+          "pending",
+          dateStr,
+          "",
+          JSON.stringify({ agreement: entry.agreement }),
+          now
+        );
+        db.close();
+      }
+    } catch (dbErr) {
+      console.error("Failed to insert registration into SQLite:", dbErr);
+    }
   });
   regWriteQueue = task.catch(() => {});
   return task;

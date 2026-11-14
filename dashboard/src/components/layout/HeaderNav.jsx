@@ -5,6 +5,7 @@ import {
   Users,
   CreditCard,
   Wrench,
+  UserPlus,
   Download,
   Database,
   FileText,
@@ -16,6 +17,7 @@ const TAB_CONFIG = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'rooms', label: 'Kamar', icon: BedDouble },
   { id: 'tenants', label: 'Penghuni', icon: Users },
+  { id: 'registrations', label: 'Pendaftar', icon: UserPlus },
   { id: 'finance', label: 'Keuangan', icon: CreditCard },
   { id: 'complaints', label: 'Keluhan', icon: Wrench },
 ];
@@ -28,6 +30,7 @@ export default function HeaderNav({
   syncState,
   roomsCount,
   overdueCount,
+  pendingRegistrationsCount,
   onExport,
   onLogout,
 }) {
@@ -87,6 +90,11 @@ export default function HeaderNav({
                 {id === 'tenants' && overdueCount > 0 && (
                   <span className="rounded-full bg-rose-100 px-1.5 py-0.2 text-[10px] text-rose-700 font-bold border border-rose-200">
                     {overdueCount}
+                  </span>
+                )}
+                {id === 'registrations' && pendingRegistrationsCount > 0 && (
+                  <span className="rounded-full bg-amber-500 text-white px-1.5 py-0.2 text-[10px] font-extrabold shadow-sm">
+                    {pendingRegistrationsCount}
                   </span>
                 )}
               </button>

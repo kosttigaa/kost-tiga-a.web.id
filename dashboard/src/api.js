@@ -1,9 +1,9 @@
 const TOKEN_KEY = 'juragankost_token';
 
-export const COLLECTION_NAMES = ['rooms', 'tenants', 'transactions', 'complaints'];
+export const COLLECTION_NAMES = ['rooms', 'tenants', 'transactions', 'complaints', 'registrations'];
 
 // Koleksi yang tampil dengan data terbaru di urutan pertama (harus sama dengan server).
-const PREPEND_COLLECTIONS = new Set(['transactions', 'complaints']);
+const PREPEND_COLLECTIONS = new Set(['transactions', 'complaints', 'registrations']);
 
 export class ApiError extends Error {
   constructor(status, message) {

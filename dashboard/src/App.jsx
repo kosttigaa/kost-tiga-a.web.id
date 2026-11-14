@@ -40,6 +40,7 @@ import RoomsView from './components/views/RoomsView';
 import TenantsView from './components/views/TenantsView';
 import FinanceView from './components/views/FinanceView';
 import ComplaintsView from './components/views/ComplaintsView';
+import RegistrationsView from './components/views/RegistrationsView';
 
 // Modals
 import RoomModal from './components/modals/RoomModal';
@@ -85,6 +86,7 @@ export default function App() {
   const [tenants, setTenants] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [complaints, setComplaints] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
   const [dataStatus, setDataStatus] = useState('loading');
   const [dataMessage, setDataMessage] = useState('');
   const [syncState, setSyncState] = useState('saved');
@@ -92,7 +94,7 @@ export default function App() {
   const [loadTick, setLoadTick] = useState(0);
 
   const snapshotRef = useRef(emptySnapshot());
-  const latestDataRef = useRef({ rooms, tenants, transactions, complaints });
+  const latestDataRef = useRef({ rooms, tenants, transactions, complaints, registrations });
   const inFlightRef = useRef(0);
   const pushChainRef = useRef(Promise.resolve());
 
@@ -103,6 +105,7 @@ export default function App() {
     return counts;
   }, {}), [rooms]);
   const openComplaints = useMemo(() => complaints.filter(complaint => complaint.status !== 'resolved'), [complaints]);
+  const pendingRegistrationsCount = useMemo(() => registrations.filter(r => !r.status || r.status === 'pending').length, [registrations]);
 
   // Modals & form state
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -146,12 +149,14 @@ export default function App() {
       tenants: data.tenants,
       transactions: data.transactions,
       complaints: data.complaints,
+      registrations: data.registrations || [],
     };
     snapshotRef.current = buildSnapshot(data);
     setRooms(next.rooms);
     setTenants(next.tenants);
     setTransactions(next.transactions);
     setComplaints(next.complaints);
+    setRegistrations(next.registrations);
   }, []);
 
   const handleSyncError = useCallback((err, fallbackMessage) => {
@@ -198,13 +203,13 @@ export default function App() {
   }, [isAuthenticated, role, loadTick, applyServerData, handleSyncError]);
 
   useEffect(() => {
-    latestDataRef.current = { rooms, tenants, transactions, complaints };
-  }, [rooms, tenants, transactions, complaints]);
+    latestDataRef.current = { rooms, tenants, transactions, complaints, registrations };
+  }, [rooms, tenants, transactions, complaints, registrations]);
 
   // Kirim perubahan ke server setiap kali data berubah
   useEffect(() => {
     if (dataStatus !== 'ready') return undefined;
-    const { changes, hasChanges, nextSnapshot } = diffData(snapshotRef.current, { rooms, tenants, transactions, complaints });
+    const { changes, hasChanges, nextSnapshot } = diffData(snapshotRef.current, { rooms, tenants, transactions, complaints, registrations });
     if (!hasChanges) return undefined;
 
     const previousSnapshot = snapshotRef.current;
@@ -234,7 +239,7 @@ export default function App() {
       });
 
     return () => clearTimeout(retryTimer);
-  }, [rooms, tenants, transactions, complaints, dataStatus, retryTick, clearSession]);
+  }, [rooms, tenants, transactions, complaints, registrations, dataStatus, retryTick, clearSession]);
 
   // Polling perubahan dari server
   useEffect(() => {
@@ -388,6 +393,9 @@ export default function App() {
       }
       showToast(`Penghuni ${formData.name} berhasil check-in di ${getRoomLocation(formData.roomNumber, roomByNumber)}!`);
     }
+    if (editingTenant?.registrationId) {
+      setRegistrations(prev => prev.map(r => r.id === editingTenant.registrationId ? { ...r, status: 'approved' } : r));
+    }
     setIsTenantModalOpen(false);
     setEditingTenant(null);
   };
@@ -467,6 +475,29 @@ export default function App() {
     showToast(`Status keluhan diperbarui menjadi ${newStatus}`);
   };
 
+  const handleUpdateRegistrationStatus = (id, newStatus) => {
+    setRegistrations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+    showToast(`Status pendaftar diubah menjadi ${newStatus === 'approved' ? 'Disetujui' : newStatus === 'rejected' ? 'Ditolak' : 'Menunggu'}`);
+  };
+
+  const handleCheckInFromRegistration = (reg) => {
+    setEditingTenant({
+      name: reg.fullName || '',
+      phone: reg.phone || '',
+      ktp: reg.nik || '',
+      emergencyContact: [reg.guardianName, reg.guardianPhone].filter(Boolean).join(' - '),
+      registrationId: reg.id,
+    });
+    setIsTenantModalOpen(true);
+  };
+
+  const handleDeleteRegistration = (id) => {
+    if (window.confirm('Yakin ingin menghapus data pendaftaran ini?')) {
+      setRegistrations(prev => prev.filter(r => r.id !== id));
+      showToast('Data pendaftar berhasil dihapus');
+    }
+  };
+
   // 1. Layar Login
   if (!isAuthenticated) {
     return (
@@ -516,6 +547,7 @@ export default function App() {
         syncState={syncState}
         roomsCount={rooms.length}
         overdueCount={overdueTenants.length}
+        pendingRegistrationsCount={pendingRegistrationsCount}
         onExport={handleExport}
         onLogout={handleLogout}
       />
@@ -603,6 +635,15 @@ export default function App() {
             roomByNumber={roomByNumber}
             onOpenComplaintModal={() => setIsComplaintModalOpen(true)}
             onUpdateComplaintStatus={handleUpdateComplaintStatus}
+          />
+        )}
+
+        {activeTab === 'registrations' && (
+          <RegistrationsView
+            registrations={registrations}
+            onUpdateStatus={handleUpdateRegistrationStatus}
+            onCheckInFromRegistration={handleCheckInFromRegistration}
+            onDeleteRegistration={handleDeleteRegistration}
           />
         )}
       </main>

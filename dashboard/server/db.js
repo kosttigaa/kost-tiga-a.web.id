@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 
@@ -43,6 +43,15 @@ export const COLLECTIONS = {
     fields: [
       ['roomNumber', TEXT], ['tenantName', TEXT], ['issue', TEXT], ['date', TEXT],
       ['status', TEXT], ['priority', TEXT], ['costEst', INT],
+    ],
+  },
+  registrations: {
+    prepend: true,
+    fields: [
+      ['kost', TEXT], ['fullName', TEXT], ['nik', TEXT], ['phone', TEXT],
+      ['address', TEXT], ['guardianName', TEXT], ['guardianPhone', TEXT],
+      ['vehicle', TEXT], ['ktpImage', TEXT], ['pdfFile', TEXT],
+      ['status', TEXT], ['date', TEXT], ['note', TEXT],
     ],
   },
 };
@@ -216,6 +225,51 @@ export function openDatabase(file) {
     }
     if (init) setMeta.run('initialized', '1');
   });
+
+  // Migrasi data pendaftar dari registrations.jsonl jika tabel registrations masih kosong
+  try {
+    const regTable = tables.registrations;
+    if (regTable && regTable.list.all().length === 0) {
+      const candidates = [
+        path.resolve(path.dirname(file), '..', '..', 'data', 'registrations.jsonl'),
+        path.resolve(path.dirname(file), '..', '..', '..', 'data', 'registrations.jsonl'),
+      ];
+      const jsonlPath = candidates.find((p) => existsSync(p));
+      if (jsonlPath) {
+        const content = readFileSync(jsonlPath, 'utf8');
+        const lines = content.split('\n').filter((l) => l.trim().length > 0);
+        for (const line of lines) {
+          try {
+            const entry = JSON.parse(line);
+            if (entry && entry.id) {
+              const record = {
+                id: entry.id,
+                kost: entry.kost || '',
+                fullName: entry.fullName || '',
+                nik: entry.nik || '',
+                phone: entry.phone || '',
+                address: entry.address || '',
+                guardianName: entry.guardianName || '',
+                guardianPhone: entry.guardianPhone || '',
+                vehicle: entry.vehicle || '',
+                ktpImage: entry.ktpImage || '',
+                pdfFile: entry.pdfFile || '',
+                status: entry.status || 'pending',
+                date: entry.timestamp ? entry.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                note: entry.note || '',
+                agreement: entry.agreement || '',
+              };
+              regTable.upsert.run(toRow(regTable, record));
+            }
+          } catch {
+            // Abaikan baris rusak
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Migrasi registrations.jsonl dilewati:', err?.message || err);
+  }
 
   return {
     readAll,

@@ -6,6 +6,7 @@ export const EXPORT_OPTIONS = [
   { name: 'tenants.csv', label: 'Penghuni (.csv)', filename: () => 'penghuni.csv' },
   { name: 'transactions.csv', label: 'Keuangan (.csv)', filename: () => 'keuangan.csv' },
   { name: 'complaints.csv', label: 'Keluhan (.csv)', filename: () => 'keluhan.csv' },
+  { name: 'registrations.csv', label: 'Pendaftar (.csv)', filename: () => 'pendaftar.csv' },
 ];
 
 export const SYNC_INTERVAL_MS = 15000;
@@ -14,8 +15,8 @@ export const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit tidak ada aktivitas
 export const LAST_ACTIVITY_KEY = 'juragankost_last_activity';
 
 export const ROLE_TABS = {
-  admin: ['dashboard', 'rooms', 'tenants', 'finance', 'complaints'],
-  penjaga: ['rooms', 'tenants', 'complaints'],
+  admin: ['dashboard', 'rooms', 'tenants', 'finance', 'complaints', 'registrations'],
+  penjaga: ['rooms', 'tenants', 'complaints', 'registrations'],
 };
 
 export const LOCATION_NAMES = {

@@ -76,7 +76,8 @@ const recordLoginFailure = (ip) => {
 
 const requireAuth = (req, _res, next) => {
   const header = req.get('authorization') || '';
-  const session = header.startsWith('Bearer ') ? readToken(header.slice(7)) : null;
+  const token = header.startsWith('Bearer ') ? header.slice(7) : (typeof req.query?.token === 'string' ? req.query.token : null);
+  const session = token ? readToken(token) : null;
   if (!session) throw new HttpError(401, 'Sesi tidak valid, silakan login ulang');
   req.session = session;
   next();
@@ -189,6 +190,15 @@ api.get('/export/:name', requireAuth, requireAdmin, (req, res) => {
   });
   const data = db.readAll();
   res.send(toCsv(name, data[name], data.rooms));
+});
+
+const uploadsDir = path.resolve(serverDir, '../../data/uploads');
+
+api.get('/uploads/:file', requireAuth, (req, res) => {
+  const filename = path.basename(req.params.file);
+  const filePath = path.join(uploadsDir, filename);
+  if (!existsSync(filePath)) throw new HttpError(404, 'File tidak ditemukan');
+  res.sendFile(filePath);
 });
 
 api.use(() => {

@@ -36,7 +36,7 @@ foreach ($file in $targetFiles) {
   }
 }
 
-git add -- *.html server.js
+git add -A
 git commit -m $Message -m "Terakhir diperbarui: $label" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 if ($LASTEXITCODE -ne 0) { throw "Commit gagal." }
 
