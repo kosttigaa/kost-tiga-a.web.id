@@ -359,14 +359,17 @@ export default function App() {
 
   // Tenant Actions
   const handleSaveTenant = (formData) => {
-    if (editingTenant) {
-      setTenants(tenants.map(t => t.id === formData.id ? formData : t));
-      if (String(formData.roomNumber) !== String(editingTenant.roomNumber)) {
-        setRooms(rooms.map(r => {
-          if (r.tenantId === formData.id || String(r.number) === String(editingTenant.roomNumber)) {
+    const isEdit = Boolean(formData.id);
+    const targetRoomNumber = String(formData.roomNumber || '');
+
+    if (isEdit) {
+      setTenants(prev => prev.map(t => t.id === formData.id ? { ...t, ...formData, roomNumber: targetRoomNumber } : t));
+      if (String(targetRoomNumber) !== String(editingTenant?.roomNumber)) {
+        setRooms(prev => prev.map(r => {
+          if (r.tenantId === formData.id || String(r.number) === String(editingTenant?.roomNumber)) {
             return { ...r, status: 'available', tenantId: null };
           }
-          if (String(r.number) === String(formData.roomNumber)) {
+          if (String(r.number) === targetRoomNumber) {
             return { ...r, status: 'occupied', tenantId: formData.id };
           }
           return r;
@@ -375,27 +378,48 @@ export default function App() {
       showToast('Data penghuni diperbarui!');
     } else {
       const newId = 'T-' + Date.now().toString().slice(-4);
-      const newTenant = { ...formData, id: newId };
-      setTenants([...tenants, newTenant]);
-      setRooms(rooms.map(r => r.number === formData.roomNumber ? { ...r, status: 'occupied', tenantId: newId } : r));
+      const newTenant = {
+        id: newId,
+        name: formData.name,
+        phone: formData.phone,
+        ktp: formData.ktp,
+        roomNumber: targetRoomNumber,
+        entryDate: formData.entryDate,
+        dueDate: formData.dueDate,
+        paymentStatus: formData.paymentStatus,
+        deposit: Number(formData.deposit || 0),
+        emergencyContact: formData.emergencyContact || '',
+      };
+      setTenants(prev => [...prev, newTenant]);
+      setRooms(prev => prev.map(r => String(r.number) === targetRoomNumber
+        ? { ...r, status: 'occupied', tenantId: newId }
+        : r
+      ));
 
       if (formData.firstPayment && Number(formData.firstPayment) > 0) {
         const newTrx = {
-          date: formData.entryDate,
+          date: formData.entryDate || new Date().toISOString().split('T')[0],
           type: 'income',
           category: 'Sewa Kamar',
           amount: Number(formData.firstPayment),
-          roomNumber: formData.roomNumber,
+          roomNumber: targetRoomNumber,
           tenantName: formData.name,
-          note: `Pembayaran awal sewa & check-in ${getRoomLocation(formData.roomNumber, roomByNumber)}`
+          note: `Pembayaran awal sewa & check-in ${getRoomLocation(targetRoomNumber, roomByNumber)}`
         };
         setTransactions(prev => [{ ...newTrx, id: getNextTransactionId(prev) }, ...prev]);
       }
-      showToast(`Penghuni ${formData.name} berhasil check-in di ${getRoomLocation(formData.roomNumber, roomByNumber)}!`);
+
+      if (formData.registrationId || editingTenant?.registrationId) {
+        const regId = formData.registrationId || editingTenant?.registrationId;
+        setRegistrations(prev => prev.map(r => r.id === regId
+          ? { ...r, status: 'approved', note: `Check-in di Kamar ${targetRoomNumber}` }
+          : r
+        ));
+      }
+
+      showToast(`Penghuni ${formData.name} berhasil check-in di ${getRoomLocation(targetRoomNumber, roomByNumber)}!`);
     }
-    if (editingTenant?.registrationId) {
-      setRegistrations(prev => prev.map(r => r.id === editingTenant.registrationId ? { ...r, status: 'approved' } : r));
-    }
+
     setIsTenantModalOpen(false);
     setEditingTenant(null);
   };

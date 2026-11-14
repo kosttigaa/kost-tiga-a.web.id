@@ -11,11 +11,24 @@ export default function TenantModal({
 }) {
   if (!isOpen) return null;
 
+  const isEditing = Boolean(editingTenant?.id);
+  const isFromRegistration = Boolean(editingTenant?.registrationId);
+  const availableRooms = rooms.filter(r => r.status === 'available');
+
+  const defaultEntryDate = editingTenant?.entryDate || new Date().toISOString().split('T')[0];
+  const defaultDueDate = editingTenant?.dueDate || (() => {
+    const d = new Date(defaultEntryDate);
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  })();
+  const defaultFirstPayment = availableRooms[0]?.price || 1200000;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     onSave({
-      id: editingTenant?.id || null,
+      id: isEditing ? editingTenant.id : null,
+      registrationId: editingTenant?.registrationId || null,
       name: fd.get('name'),
       phone: fd.get('phone'),
       ktp: fd.get('ktp'),
@@ -29,7 +42,11 @@ export default function TenantModal({
     });
   };
 
-  const title = editingTenant ? 'Edit Data Penghuni' : 'Form Check-In Penghuni Baru';
+  const title = isEditing
+    ? 'Edit Data Penghuni'
+    : isFromRegistration
+    ? 'Form Check-In dari Pendaftaran Online'
+    : 'Form Check-In Penghuni Baru';
 
   return (
     <Modal title={title} onClose={onClose} maxWidth="max-w-lg">
@@ -73,15 +90,16 @@ export default function TenantModal({
             <label className="text-xs font-semibold text-slate-600 block mb-1">Pilih Kamar</label>
             <select
               name="roomNumber"
-              defaultValue={editingTenant?.roomNumber || ''}
+              required
+              defaultValue={isEditing ? editingTenant?.roomNumber : (availableRooms[0]?.number || '')}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             >
-              {editingTenant && (
+              {isEditing && (
                 <option value={editingTenant.roomNumber}>
                   {getRoomLocation(editingTenant.roomNumber, roomByNumber)} (Saat Ini)
                 </option>
               )}
-              {rooms.filter(r => r.status === 'available').map(r => (
+              {availableRooms.map(r => (
                 <option key={r.id} value={r.number}>
                   {getRoomLocation(r.number, roomByNumber)} ({getRoomTypeLabel(r.type)} - {formatRupiah(r.price)})
                 </option>
@@ -93,7 +111,7 @@ export default function TenantModal({
             <input
               type="number"
               name="deposit"
-              defaultValue={editingTenant?.deposit || 500000}
+              defaultValue={editingTenant?.deposit ?? 500000}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             />
           </div>
@@ -106,7 +124,7 @@ export default function TenantModal({
               type="date"
               required
               name="entryDate"
-              defaultValue={editingTenant?.entryDate || new Date().toISOString().split('T')[0]}
+              defaultValue={defaultEntryDate}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             />
           </div>
@@ -116,7 +134,7 @@ export default function TenantModal({
               type="date"
               required
               name="dueDate"
-              defaultValue={editingTenant?.dueDate || ''}
+              defaultValue={defaultDueDate}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             />
           </div>
@@ -146,14 +164,14 @@ export default function TenantModal({
           </div>
         </div>
 
-        {!editingTenant && (
+        {!isEditing && (
           <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl">
             <label className="text-xs font-bold text-blue-900 block mb-1">Pembayaran Pertama Masuk (Otomatis Masuk Kas)</label>
             <input
               type="number"
               name="firstPayment"
-              placeholder="1500000"
-              defaultValue={1500000}
+              placeholder="1200000"
+              defaultValue={defaultFirstPayment}
               className="w-full px-3 py-2 text-sm bg-white border border-blue-200 rounded-lg focus:outline-none"
             />
           </div>

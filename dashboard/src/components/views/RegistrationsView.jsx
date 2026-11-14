@@ -183,6 +183,54 @@ export default function RegistrationsView({
         </div>
       </div>
 
+      {/* Quick Status Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            statusFilter === 'all'
+              ? 'bg-[#1f3028] text-white shadow-sm'
+              : 'bg-white border border-[#e8e1d1] text-[#3c4540] hover:bg-[#eeeadf]'
+          }`}
+        >
+          Semua ({stats.total})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter('pending')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            statusFilter === 'pending'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-white border border-amber-200 text-amber-800 hover:bg-amber-50'
+          }`}
+        >
+          Perlu Check-In ({stats.pending})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter('approved')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            statusFilter === 'approved'
+              ? 'bg-emerald-700 text-white shadow-sm'
+              : 'bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50'
+          }`}
+        >
+          Sudah Masuk Kamar ({stats.approved})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter('rejected')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            statusFilter === 'rejected'
+              ? 'bg-rose-700 text-white shadow-sm'
+              : 'bg-white border border-rose-200 text-rose-800 hover:bg-rose-50'
+          }`}
+        >
+          Ditolak ({stats.rejected})
+        </button>
+      </div>
+
       {/* List / Table */}
       <div className="bg-white rounded-xl border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] overflow-hidden">
         {filtered.length === 0 ? (
@@ -285,23 +333,34 @@ export default function RegistrationsView({
                       </td>
 
                       <td className="py-3 px-4 align-top whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                            isApproved
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : isRejected
-                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                              : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}
-                        >
-                          {isApproved ? 'Disetujui' : isRejected ? 'Ditolak' : 'Menunggu'}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                              isApproved
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : isRejected
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}
+                          >
+                            {isApproved ? 'Disetujui' : isRejected ? 'Ditolak' : 'Menunggu'}
+                          </span>
+                          {item.note && (
+                            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                              {item.note}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 align-top text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* Tombol Check-In / Konversi jadi Penghuni */}
-                          {!isRejected && (
+                          {isApproved ? (
+                            <span className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 inline-flex items-center gap-1">
+                              ✓ Selesai Check-In
+                            </span>
+                          ) : !isRejected ? (
                             <button
                               type="button"
                               onClick={() => onCheckInFromRegistration(item)}
@@ -310,7 +369,7 @@ export default function RegistrationsView({
                             >
                               <UserCheck className="w-3.5 h-3.5" /> Check-In
                             </button>
-                          )}
+                          ) : null}
 
                           {/* Tombol Ubah Status */}
                           {isPending && (
@@ -339,6 +398,7 @@ export default function RegistrationsView({
                               type="button"
                               onClick={() => onUpdateStatus(item.id, 'pending')}
                               className="px-2 py-1 text-[11px] font-semibold rounded border border-[#e8e1d1] text-[#6d716a] hover:bg-[#eeeadf] transition cursor-pointer"
+                              title="Kembalikan status ke Menunggu"
                             >
                               Reset
                             </button>
