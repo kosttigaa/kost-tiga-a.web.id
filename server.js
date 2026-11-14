@@ -1684,7 +1684,7 @@ form.addEventListener("submit", async function(e) {
   if (!agreement) return showError("Anda harus mencentang persetujuan tata tertib kost untuk mendaftar.");
 
   submitBtn.disabled = true;
-  submitBtn.textContent = "Mengirim Pendaftaran...";
+  submitBtn.textContent = "Mengirim...";
 
   try {
     const res = await fetch("/daftar", {
@@ -1698,7 +1698,7 @@ form.addEventListener("submit", async function(e) {
     if (!res.ok || !data.ok) {
       showError(data.error || "Terjadi kesalahan saat menyimpan pendaftaran.");
       submitBtn.disabled = false;
-      submitBtn.textContent = "Kirim Pendaftaran";
+      submitBtn.textContent = "Submit";
       return;
     }
 
@@ -1733,7 +1733,7 @@ form.addEventListener("submit", async function(e) {
   } catch (err) {
     showError("Gagal terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.");
     submitBtn.disabled = false;
-    submitBtn.textContent = "Kirim Pendaftaran";
+    submitBtn.textContent = "Submit";
   }
 });
 })();`;
@@ -1745,19 +1745,19 @@ function renderDaftarPage() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Formulir Pendaftaran Penghuni | Kost Tiga A</title>
-<meta name="description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
+<title>Registrasi | Kost Tiga A</title>
+<meta name="description" content="Formulir resmi registrasi calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
 <link rel="canonical" href="https://kost-tiga-a.web.id/daftar">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="id_ID">
 <meta property="og:site_name" content="Kost Tiga A">
-<meta property="og:title" content="Formulir Pendaftaran Penghuni | Kost Tiga A">
-<meta property="og:description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
+<meta property="og:title" content="Registrasi | Kost Tiga A">
+<meta property="og:description" content="Formulir resmi registrasi calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
 <meta property="og:url" content="https://kost-tiga-a.web.id/daftar">
 <meta property="og:image" content="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&amp;fit=crop&amp;w=1200&amp;q=85">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Formulir Pendaftaran Penghuni | Kost Tiga A">
-<meta name="twitter:description" content="Formulir resmi pendaftaran calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
+<meta name="twitter:title" content="Registrasi | Kost Tiga A">
+<meta name="twitter:description" content="Formulir resmi registrasi calon penghuni Kost Putri: Athaya dan Kost Putri: Alya di Jatimakmur, Pondok Gede, Bekasi.">
 <meta name="twitter:image" content="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&amp;fit=crop&amp;w=1200&amp;q=85">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="alternate icon" href="/favicon.ico">
@@ -1872,7 +1872,7 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
 <main>
 <div class="hero-head" id="head-sec">
   <span class="eyebrow">Formulir Resmi</span>
-  <h1>Pendaftaran Penghuni</h1>
+  <h1>Registrasi</h1>
   <p class="subtitle">Lengkapi formulir di bawah ini dengan data asli dan valid untuk keperluan administrasi sewa kamar di Kost Putri: Athaya atau Kost Putri: Alya.</p>
 </div>
 
@@ -2072,7 +2072,7 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
       </label>
     </div>
 
-    <button type="submit" class="submit-btn" id="submit-btn">Kirim Pendaftaran</button>
+    <button type="submit" class="submit-btn" id="submit-btn">Submit</button>
   </form>
 </div>
 
