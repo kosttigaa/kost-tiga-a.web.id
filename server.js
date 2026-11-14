@@ -2271,7 +2271,7 @@ async function handleDaftar(request, response, dataDir) {
 
   await saveRegistration(dataDir, entry);
 
-  const managerPhone = isAthaya ? "628990004926" : "6289679059555";
+  const managerPhone = isAthaya ? "628990004926" : "628990004926";
   const managerName = isAthaya ? "Bu Athaya" : "Mbak Alya";
   const waText = `Halo Pengelola Kost Tiga A (${managerName}),\nSaya sudah mengisi formulir pendaftaran penghuni baru:\n\n*Nama:* ${fullName}\n*Pilihan Kost:* ${officialKost}\n*NIK:* ${nik}\n*No. WA:* ${phone}\n*Kendaraan:* ${entry.vehicle}\n*Alamat Asal:* ${address}\n\nMohon konfirmasi pendaftaran saya. Terima kasih!`;
   const whatsappUrl = `https://wa.me/${managerPhone}?text=${encodeURIComponent(waText)}`;

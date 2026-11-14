@@ -1,5 +1,5 @@
 (() => {
-  const targets = { "628990004926": "athaya", "6289679059555": "alya" };
+  const targets = ["athaya", "alya"];
   const types = [
     ["ac", "AC"],
     ["nonac", "Non-AC"],
@@ -14,6 +14,19 @@
     ".room-status li[data-state=full]{background:#fdeaea;color:#a02020}";
   document.head.append(style);
 
+  function targetOf(link) {
+    const card = link.closest(".property-content");
+    if (card) {
+      const heading = card.querySelector("h2");
+      if (heading && /alya/i.test(heading.textContent)) return "alya";
+      if (heading && /athaya/i.test(heading.textContent)) return "athaya";
+    }
+    const href = link.href || "";
+    if (/alya/i.test(href)) return "alya";
+    if (/athaya/i.test(href)) return "athaya";
+    return null;
+  }
+
   function place(target, counts) {
     const items = types
       .filter(([key]) => Number.isInteger(counts[key]))
@@ -26,7 +39,7 @@
     if (!items.length) return;
 
     for (const link of document.querySelectorAll('a[href^="https://wa.me/"]')) {
-      if (targets[new URL(link.href).pathname.slice(1)] !== target) continue;
+      if (targetOf(link) !== target) continue;
       const card = link.closest(".property-content");
       const bottom = card && card.querySelector(".property-bottom");
       if (!bottom || card.querySelector(".room-status")) continue;
@@ -42,7 +55,7 @@
   fetch("/api/rooms", { cache: "no-cache" })
     .then((response) => (response.ok ? response.json() : {}))
     .then((rooms) => {
-      for (const target of Object.values(targets)) {
+      for (const target of targets) {
         if (rooms[target]) place(target, rooms[target]);
       }
     })

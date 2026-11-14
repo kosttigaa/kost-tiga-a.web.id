@@ -596,7 +596,7 @@ describe("static website server", () => {
     assert.match(getDaftar.headers.get("content-type"), /text\/html/);
     assert.ok(getDaftar.headers.get("content-security-policy"));
     const html = await getDaftar.text();
-    assert.match(html, /Formulir Pendaftaran Penghuni/);
+    assert.match(html, /Registrasi/);
     assert.match(html, /Kost Putri: Athaya/);
     assert.match(html, /Kost Putri: Alya/);
 
@@ -637,8 +637,8 @@ describe("static website server", () => {
     assert.equal(postRes.status, 200);
     const postJson = await postRes.json();
     assert.equal(postJson.ok, true);
-    assert.equal(postJson.managerPhone, "6289679059555");
-    assert.match(postJson.whatsappUrl, /wa\.me\/6289679059555/);
+    assert.equal(postJson.managerPhone, "628990004926");
+    assert.match(postJson.whatsappUrl, /wa\.me\/628990004926/);
     assert.ok(postJson.pdfUrl);
 
     // 4b. Test public PDF download by registrant

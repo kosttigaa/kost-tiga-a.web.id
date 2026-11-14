@@ -1,5 +1,5 @@
 (() => {
-  const targets = { "628990004926": "athaya", "6289679059555": "alya" };
+  const targets = { "628990004926": "athaya" };
   const pages = ["index.html", "2.html", "3.html", "4.html", "5.html", "6.html"];
 
   function currentPage() {
@@ -24,11 +24,27 @@
     return section ? section.id.replace(/[^a-z0-9-]/gi, "").toLowerCase().slice(0, 30) || "page" : "page";
   }
 
+  function targetOf(link) {
+    const href = link.href || "";
+    if (/alya/i.test(href)) return "alya";
+    if (/athaya/i.test(href)) return "athaya";
+    const text = link.textContent || "";
+    if (/alya/i.test(text)) return "alya";
+    if (/athaya/i.test(text)) return "athaya";
+    const card = link.closest && link.closest(".property-content");
+    if (card) {
+      const heading = card.querySelector("h2");
+      if (heading && /alya/i.test(heading.textContent)) return "alya";
+      if (heading && /athaya/i.test(heading.textContent)) return "athaya";
+    }
+    return targets[new URL(link.href).pathname.slice(1)];
+  }
+
   function report(event) {
     const link = event.target.closest && event.target.closest('a[href^="https://wa.me/"]');
     if (!link) return;
 
-    const target = targets[new URL(link.href).pathname.slice(1)];
+    const target = targetOf(link);
     if (!target) return;
 
     const body = JSON.stringify({ target, page: currentPage(), slot: slotOf(link) });
