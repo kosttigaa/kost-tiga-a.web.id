@@ -492,164 +492,354 @@ function escapePdf(text) {
     .replace(/\)/g, "\\)");
 }
 
-function truncatePdf(text, max = 75) {
-  const str = String(text ?? "").trim();
-  return str.length > max ? str.slice(0, max - 3) + "..." : str;
+function wrapText(text, maxChars = 92) {
+  const words = String(text ?? "").trim().split(/\s+/);
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    if (!current) {
+      current = word;
+    } else if ((current + " " + word).length <= maxChars) {
+      current += " " + word;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
 }
 
 function generateRegistrationPdf(entry) {
-  const lines = [];
-  const add = (cmd) => lines.push(cmd);
+  // ===================== HALAMAN 1 (A4: 595.28 x 841.89) =====================
+  const p1Lines = [];
+  const add1 = (cmd) => p1Lines.push(cmd);
 
-  add("q");
+  add1("q");
   // Header background bar (#354c3f)
-  add("0.208 0.298 0.247 rg");
-  add("0 766 595.28 76 re f");
+  add1("0.208 0.298 0.247 rg");
+  add1("0 766 595.28 76 re f");
 
-  // Mandatory 3A Brand Mark Badge (Rounded rect: x=36, y=778, w=48, h=48, r=10)
-  add("0.843 0.839 0.631 rg"); // #d7d6a1
-  add("0.208 0.259 0.224 RG"); // #354239
-  add("1.5 w");
-  add("46 778 m 74 778 l 79.52 778 84 782.48 84 788 c 84 816 l 84 821.52 79.52 826 74 826 c 46 826 l 40.48 826 36 821.52 36 816 c 36 788 l 36 782.48 40.48 778 46 778 c B");
+  // Mandatory 3A Brand Mark Badge (x=46, y=778, w=48, h=48, r=10)
+  add1("0.843 0.839 0.631 rg"); // #d7d6a1
+  add1("0.208 0.259 0.224 RG"); // #354239
+  add1("1.5 w");
+  add1("46 778 m 74 778 l 79.52 778 84 782.48 84 788 c 84 816 l 84 821.52 79.52 826 74 826 c 46 826 l 40.48 826 36 821.52 36 816 c 36 788 l 36 782.48 40.48 778 46 778 c B");
 
   // 3A text inside badge
-  add("0.133 0.188 0.157 rg");
-  add("BT /F2 21 Tf 46.5 795 Td (3A) Tj ET");
+  add1("0.133 0.188 0.157 rg");
+  add1("BT /F2 21 Tf 46.5 795 Td (3A) Tj ET");
 
-  // Title beside 3A brand mark
-  add("1 1 1 rg");
-  add("BT /F2 17 Tf 96 812 Td (KOST TIGA A) Tj ET");
-  add("BT /F1 9.5 Tf 96 794 Td (FORMULIR BUKTI PENDAFTARAN & PERSETUJUAN SEWA) Tj ET");
-  add("BT /F1 8.5 Tf 410 794 Td (Dokumen Resmi Sistem Online) Tj ET");
+  // Header Title
+  add1("1 1 1 rg");
+  add1("BT /F2 17 Tf 98 812 Td (KOST TIGA A) Tj ET");
+  add1("BT /F1 9.5 Tf 98 794 Td (FORMULIR BUKTI PENDAFTARAN & PERSETUJUAN SEWA) Tj ET");
+  add1("BT /F1 8.5 Tf 410 794 Td (Dokumen Resmi Sistem Online) Tj ET");
 
   // Info Box
-  add("0.965 0.953 0.922 rg");
-  add("36 710 523.28 44 re f");
-  add("0.910 0.882 0.820 RG");
-  add("1 w 36 710 523.28 44 re s");
+  add1("0.965 0.953 0.922 rg");
+  add1("36 710 523.28 44 re f");
+  add1("0.910 0.882 0.820 RG 1 w");
+  add1("36 710 523.28 44 re s");
 
-  add("0.141 0.176 0.161 rg");
-  add(`BT /F2 9.5 Tf 46 736 Td (ID Pendaftaran: ${escapePdf(entry.id)}) Tj ET`);
-  add(`BT /F1 8.5 Tf 46 720 Td (Waktu Submit: ${escapePdf(entry.timestampWib)}) Tj ET`);
-  add(`BT /F2 9.5 Tf 330 736 Td (Pilihan Unit: ${escapePdf(entry.kost)}) Tj ET`);
-  add(`BT /F1 8.5 Tf 330 720 Td (Status: Menunggu Konfirmasi WhatsApp) Tj ET`);
+  add1("0.141 0.176 0.161 rg");
+  add1(`BT /F2 9.5 Tf 46 736 Td (ID Pendaftaran: ${escapePdf(entry.id)}) Tj ET`);
+  add1(`BT /F1 8.5 Tf 46 720 Td (Waktu Submit: ${escapePdf(entry.timestampWib)}) Tj ET`);
+  add1(`BT /F2 9.5 Tf 330 736 Td (Pilihan Unit: ${escapePdf(entry.kost)}) Tj ET`);
+  add1("BT /F1 8.5 Tf 330 720 Td (Status: Menunggu Konfirmasi WhatsApp) Tj ET");
 
   // Section 1: Data Calon Penghuni
-  add("0.208 0.298 0.247 rg");
-  add("BT /F2 11 Tf 36 685 Td (1. IDENTITAS CALON PENGHUNI) Tj ET");
-  add("0.8 0.8 0.8 RG 0.5 w 36 678 m 559.28 678 l S");
+  add1("0.208 0.298 0.247 rg");
+  add1("BT /F2 10.5 Tf 36 685 Td (1. IDENTITAS CALON PENGHUNI) Tj ET");
+  add1("0.8 0.8 0.8 RG 0.5 w 36 678 m 559.28 678 l S");
 
   const fields1 = [
     ["Nama Lengkap", entry.fullName],
     ["NIK (KTP)", entry.nik],
     ["Nomor WhatsApp", entry.phone],
     ["Kendaraan", entry.vehicle || "Tidak Membawa Kendaraan"],
-    ["Alamat Asal", truncatePdf(entry.address, 72)],
+    ["Alamat Asal", entry.address],
   ];
 
-  let y = 660;
+  let y = 661;
   for (const [label, val] of fields1) {
-    add("0.427 0.443 0.416 rg");
-    add(`BT /F2 9 Tf 46 ${y} Td (${escapePdf(label)}:) Tj ET`);
-    add("0.141 0.176 0.161 rg");
-    add(`BT /F1 9 Tf 160 ${y} Td (${escapePdf(val)}) Tj ET`);
-    y -= 15;
+    add1("0.427 0.443 0.416 rg");
+    add1(`BT /F2 8.5 Tf 46 ${y} Td (${escapePdf(label)}:) Tj ET`);
+    add1("0.141 0.176 0.161 rg");
+    const wrapped = wrapText(val, 72);
+    add1(`BT /F1 8.5 Tf 160 ${y} Td (${escapePdf(wrapped[0] || "")}) Tj ET`);
+    if (wrapped.length > 1) {
+      for (let w = 1; w < wrapped.length; w++) {
+        y -= 11.5;
+        add1(`BT /F1 8.5 Tf 160 ${y} Td (${escapePdf(wrapped[w])}) Tj ET`);
+      }
+    }
+    y -= 13.5;
   }
 
   // Section 2: Kontak Darurat
   y -= 4;
-  add("0.208 0.298 0.247 rg");
-  add(`BT /F2 11 Tf 36 ${y} Td (2. KONTAK DARURAT (ORANG TUA / WALI)) Tj ET`);
-  add(`0.8 0.8 0.8 RG 0.5 w 36 ${y - 7} m 559.28 ${y - 7} l S`);
+  add1("0.208 0.298 0.247 rg");
+  add1(`BT /F2 10.5 Tf 36 ${y} Td (2. KONTAK DARURAT (ORANG TUA / WALI)) Tj ET`);
+  add1(`0.8 0.8 0.8 RG 0.5 w 36 ${y - 6} m 559.28 ${y - 6} l S`);
 
-  y -= 21;
+  y -= 18;
   const fields2 = [
-    ["Nama Orang Tua / Wali", entry.guardianName],
-    ["No. WhatsApp Wali", entry.guardianPhone],
+    ["Nama Orang Tua / Wali", entry.guardianName || "-"],
+    ["No. WhatsApp Wali", entry.guardianPhone || "-"],
   ];
   for (const [label, val] of fields2) {
-    add("0.427 0.443 0.416 rg");
-    add(`BT /F2 9 Tf 46 ${y} Td (${escapePdf(label)}:) Tj ET`);
-    add("0.141 0.176 0.161 rg");
-    add(`BT /F1 9 Tf 160 ${y} Td (${escapePdf(val)}) Tj ET`);
-    y -= 15;
+    add1("0.427 0.443 0.416 rg");
+    add1(`BT /F2 8.5 Tf 46 ${y} Td (${escapePdf(label)}:) Tj ET`);
+    add1("0.141 0.176 0.161 rg");
+    add1(`BT /F1 8.5 Tf 160 ${y} Td (${escapePdf(val)}) Tj ET`);
+    y -= 13.5;
   }
 
-  // Section 3: Tata Tertib
+  // Section 3: Tata Tertib - Bagian 1
   y -= 4;
-  add("0.208 0.298 0.247 rg");
-  add(`BT /F2 11 Tf 36 ${y} Td (3. KETENTUAN & TATA TERTIB SEWA KOST) Tj ET`);
-  add(`0.8 0.8 0.8 RG 0.5 w 36 ${y - 7} m 559.28 ${y - 7} l S`);
+  add1("0.208 0.298 0.247 rg");
+  add1(`BT /F2 10.5 Tf 36 ${y} Td (3. KETENTUAN & TATA TERTIB SEWA KOST (BAGIAN 1 DARI 2)) Tj ET`);
+  add1(`0.8 0.8 0.8 RG 0.5 w 36 ${y - 6} m 559.28 ${y - 6} l S`);
 
-  y -= 16;
-  const rules = [
-    "1. Umum: Wajib menjaga ketertiban, kebersihan, keamanan. Dilarang narkoba, miras, sajam. Dilarang merokok di kamar/selasar.",
-    "2. Pembayaran: Uang sewa dibayarkan maksimal tanggal due date. Uang sewa yang sudah dibayar tidak dapat dikembalikan.",
-    "3. Fasilitas & Listrik: Rawat fasilitas kost. Meteran token prabayar mandiri. Dilarang memaku/menempel tembok tanpa izin.",
-    "4. Tamu: Maksimal kunjungan pk 23.00 WIB. Lawan jenis dilarang masuk kamar. Tamu menginap Rp 20.000/malam (izin pemilik).",
-    "5. Kendaraan: Parkir tertib di area yang disediakan, kunci ganda, dan matikan mesin. Kehilangan menjadi risiko penyewa.",
-    "6. Keamanan: Kunci pintu kamar, pintu utama, dan gerbang saat keluar. Hewan peliharaan dilarang tanpa izin.",
-    "7. Sanksi: Pelanggaran ringan diberi peringatan. Pelanggaran berat dikenakan sanksi pengusiran tanpa pengembalian uang.",
-    "   * KHUSUS KEHILANGAN KUNCI: Dikenakan biaya duplikasi/penggantian kunci sebesar Rp 100.000,-.",
-    "8. Pelaporan Mandiri: Khusus Kost Putri: Alya wajib melapor ke RT 008/09 via WA: 081296191356 setelah resmi menyewa.",
+  y -= 15;
+  add1("0.4 0.4 0.4 rg");
+  add1(`BT /F1 7.5 Tf 36 ${y} Td (Untuk kenyamanan bersama antara seluruh penghuni dan pengelola, berikut adalah tata tertib resmi yang berlaku:) Tj ET`);
+
+  const p1Sections = [
+    {
+      title: "1. Umum",
+      items: [
+        "Penghuni wajib menjaga ketertiban, kebersihan, dan keamanan lingkungan kost.",
+        "Penghuni dilarang membawa, menyimpan, atau menggunakan barang terlarang (narkoba, senjata tajam, miras, dll).",
+        "Penghuni wajib menjaga sopan santun dan tidak mengganggu kenyamanan penghuni lain.",
+        "Dilarang merokok di dalam kamar dan selasar kost. Merokok hanya di area terbuka yang telah ditentukan (jika ada).",
+        "Tamu dilarang menginap di dalam kamar tanpa seizin pengelola kost.",
+      ]
+    },
+    {
+      title: "2. Pembayaran",
+      items: [
+        "Uang sewa dibayarkan maksimal tanggal due date (jatuh tempo) setiap bulannya.",
+        "Uang sewa yang sudah dibayarkan tidak dapat dikembalikan atau dialihkan dengan alasan apa pun.",
+      ]
+    },
+    {
+      title: "3. Fasilitas & Listrik",
+      items: [
+        "Fasilitas kost hanya untuk digunakan oleh penghuni dan tidak boleh dipinjamkan ke pihak luar tanpa izin.",
+        "Penghuni wajib merawat fasilitas yang disediakan. Kerusakan akibat kelalaian menjadi tanggung jawab penghuni.",
+        "Setiap kamar dilengkapi meteran listrik prabayar (token). Penghuni bertanggung jawab mengisi token listrik sendiri.",
+        "Penggunaan listrik sepenuhnya menjadi tanggung jawab masing-masing penghuni kamar.",
+        "Peralatan listrik berdaya tinggi (kompor listrik, setrika uap, pemanas air besar, AC portable, dll) wajib seizin pemilik demi mencegah korsleting/kebakaran.",
+        "Penghuni dilarang memaku, mengebor, atau menempelkan benda di tembok kamar (paku, double tape, stiker, wallpaper, dll) tanpa izin pemilik.",
+      ]
+    }
   ];
 
-  for (const rule of rules) {
-    add("0.25 0.25 0.25 rg");
-    add(`BT /F1 7.5 Tf 46 ${y} Td (${escapePdf(rule)}) Tj ET`);
-    y -= 12.5;
+  y -= 13;
+  for (const sec of p1Sections) {
+    add1("0.141 0.176 0.161 rg");
+    add1(`BT /F2 8.5 Tf 42 ${y} Td (${escapePdf(sec.title)}) Tj ET`);
+    y -= 11;
+
+    for (let i = 0; i < sec.items.length; i++) {
+      const itemText = sec.items[i];
+      const numPrefix = `${sec.title.split('.')[0]}.${i + 1}. `;
+      const fullText = numPrefix + itemText;
+      const wrapped = wrapText(fullText, 98);
+
+      add1("0.25 0.25 0.25 rg");
+      add1(`BT /F1 7.5 Tf 48 ${y} Td (${escapePdf(wrapped[0])}) Tj ET`);
+      y -= 9.5;
+      for (let w = 1; w < wrapped.length; w++) {
+        add1(`BT /F1 7.5 Tf 64 ${y} Td (${escapePdf(wrapped[w])}) Tj ET`);
+        y -= 9.5;
+      }
+      y -= 0.5;
+    }
+    y -= 3;
   }
 
-  // Persetujuan box
-  y -= 6;
-  add("0.93 0.96 0.94 rg");
-  add(`36 ${y - 38} 523.28 44 re f`);
-  add("0.13 0.50 0.24 RG 1 w");
-  add(`36 ${y - 38} 523.28 44 re s`);
-  add("0.08 0.39 0.20 rg");
-  add(`BT /F2 8.5 Tf 46 ${y - 4} Td (PERNYATAAN PERSETUJUAN CALON PENGHUNI (TELAH DISETUJUI SECARA DIGITAL):) Tj ET`);
-  add(`BT /F1 8 Tf 46 ${y - 18} Td ("Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini,) Tj ET`);
-  add(`BT /F1 8 Tf 46 ${y - 30} Td (serta bersedia menerima sanksi apabila melakukan pelanggaran.") Tj ET`);
+  // Banner Sambungan ke Halaman 2
+  add1("0.96 0.96 0.94 rg");
+  add1("36 45 523.28 26 re f");
+  add1("0.85 0.85 0.80 RG 0.5 w");
+  add1("36 45 523.28 26 re s");
+  add1("0.3 0.35 0.32 rg");
+  add1("BT /F2 7.5 Tf 46 55 Td (>>> Bersambung ke Halaman 2: Klausul Tamu, Kendaraan, Keamanan, Sanksi, Pelaporan RT, dan Lembar Persetujuan Sewa) Tj ET");
 
-  // Footer / Signatures
-  y -= 54;
-  add("0.427 0.443 0.416 rg");
-  add(`BT /F1 8 Tf 46 ${y} Td (Calon Penghuni:) Tj ET`);
-  add(`BT /F2 9 Tf 46 ${y - 28} Td (${escapePdf(entry.fullName)}) Tj ET`);
-  add(`BT /F1 7.5 Tf 46 ${y - 40} Td (Telah diverifikasi via NIK: ${escapePdf(entry.nik)}) Tj ET`);
+  // Running Footer Page 1
+  add1("0.5 0.5 0.5 rg");
+  add1("BT /F1 7 Tf 36 26 Td (Halaman 1 dari 2  |  Formulir Bukti Pendaftaran & Persetujuan Sewa Kost Tiga A  |  https://kost-tiga-a.web.id) Tj ET");
 
-  add(`BT /F1 8 Tf 360 ${y} Td (Pengelola Kost Tiga A:) Tj ET`);
-  add(`BT /F2 9 Tf 360 ${y - 28} Td (${escapePdf(entry.kost)}) Tj ET`);
-  add(`BT /F1 7.5 Tf 360 ${y - 40} Td (https://kost-tiga-a.web.id) Tj ET`);
+  add1("Q");
 
-  add("Q");
+  // ===================== HALAMAN 2 (A4: 595.28 x 841.89) =====================
+  const p2Lines = [];
+  const add2 = (cmd) => p2Lines.push(cmd);
 
-  const streamContent = lines.join("\n");
-  const streamLength = Buffer.byteLength(streamContent, "latin1");
+  add2("q");
+  // Header background bar (#354c3f)
+  add2("0.208 0.298 0.247 rg");
+  add2("0 788 595.28 54 re f");
+
+  // Mini Brand badge
+  add2("0.843 0.839 0.631 rg");
+  add2("36 796 34 36 re f");
+  add2("0.133 0.188 0.157 rg");
+  add2("BT /F2 16 Tf 42 807 Td (3A) Tj ET");
+
+  add2("1 1 1 rg");
+  add2("BT /F2 12 Tf 78 817 Td (KOST TIGA A - KETENTUAN & TATA TERTIB SEWA (LANJUTAN)) Tj ET");
+  add2(`BT /F1 8 Tf 78 802 Td (No. Registrasi: ${escapePdf(entry.id)}  |  Calon Penghuni: ${escapePdf(entry.fullName)}  |  Pilihan: ${escapePdf(entry.kost)}) Tj ET`);
+
+  let y2 = 764;
+  const p2Sections = [
+    {
+      title: "4. Tamu & Kunjungan",
+      items: [
+        "Tamu hanya diperbolehkan berkunjung maksimal sampai pukul 23.00 WIB.",
+        "Tamu lawan jenis dilarang keras masuk ke dalam kamar kost kecuali ada izin khusus tertulis dari pemilik/pengelola.",
+        "Tamu yang menginap dikenakan biaya tambahan sebesar Rp 20.000,- per malam dan wajib seizin pemilik.",
+        "Tanggung jawab atas segala perilaku dan ketertiban tamu sepenuhnya berada pada penghuni yang dikunjungi.",
+      ]
+    },
+    {
+      title: "5. Kendaraan",
+      items: [
+        "Penghuni yang membawa kendaraan wajib memarkir di area parkir yang telah disediakan secara tertib dan rapi.",
+        "Parkir dilakukan dengan rapi agar tidak menghalangi keluar-masuk kendaraan penghuni lain.",
+        "Penghuni wajib mematikan mesin, lampu, dan memasang kunci ganda pengaman saat memarkir kendaraan.",
+        "Apabila ada ketentuan iuran parkir atau retribusi lingkungan, akan diberitahukan resmi oleh pihak pengelola kost.",
+        "Pemilik/pengelola kost tidak bertanggung jawab atas kehilangan atau kerusakan kendaraan dan helm. Segala risiko menjadi tanggung jawab penghuni.",
+      ]
+    },
+    {
+      title: "6. Keamanan Lingkungan",
+      items: [
+        "Setiap penghuni wajib mengunci pintu kamar masing-masing, pintu utama, dan pintu gerbang kost saat keluar/masuk.",
+        "Pemilik/pengelola kost tidak bertanggung jawab atas kehilangan barang berharga pribadi akibat kelalaian penghuni.",
+        "Penghuni dilarang keras membawa atau memelihara hewan peliharaan apa pun di lingkungan kost tanpa izin.",
+      ]
+    },
+    {
+      title: "7. Ketentuan Sanksi & Denda Kehilangan Kunci",
+      items: [
+        "Pelanggaran ringan terhadap tata tertib akan diberikan surat peringatan (lisan/tertulis).",
+        "KHUSUS KEHILANGAN KUNCI: Penghuni dikenakan biaya duplikasi/penggantian kunci sebesar Rp 100.000,- per kejadian.",
+        "Pelanggaran berat (narkoba, tindak asusila/kriminal, merusak fasilitas kost, dll) dikenakan sanksi PENGUSIRAN SEKETIKA tanpa pengembalian uang sewa maupun uang deposit.",
+      ]
+    },
+    {
+      title: "8. Pelaporan Mandiri Lingkungan RT (Khusus Kost Putri: Alya)",
+      items: [
+        "Khusus penghuni Kost Putri: Alya, wajib melapor secara mandiri kepada Pengurus RT 008/09 via WA: 081296191356 setelah resmi menyewa.",
+        "Pelaporan dilakukan sekali saat awal masa sewa dan setiap ada perubahan data demi mendukung keamanan dan keteraturan lingkungan.",
+      ]
+    }
+  ];
+
+  for (const sec of p2Sections) {
+    add2("0.141 0.176 0.161 rg");
+    add2(`BT /F2 8.5 Tf 36 ${y2} Td (${escapePdf(sec.title)}) Tj ET`);
+    y2 -= 11;
+
+    for (let i = 0; i < sec.items.length; i++) {
+      const itemText = sec.items[i];
+      const numPrefix = `${sec.title.split('.')[0]}.${i + 1}. `;
+      const fullText = numPrefix + itemText;
+      const wrapped = wrapText(fullText, 98);
+
+      add2("0.25 0.25 0.25 rg");
+      add2(`BT /F1 7.5 Tf 44 ${y2} Td (${escapePdf(wrapped[0])}) Tj ET`);
+      y2 -= 9.5;
+      for (let w = 1; w < wrapped.length; w++) {
+        add2(`BT /F1 7.5 Tf 60 ${y2} Td (${escapePdf(wrapped[w])}) Tj ET`);
+        y2 -= 9.5;
+      }
+      y2 -= 0.5;
+    }
+    y2 -= 3;
+  }
+
+  // Catatan Penutup Tata Tertib
+  y2 -= 2;
+  add2("0.4 0.4 0.4 rg");
+  add2(`BT /F2 7.5 Tf 36 ${y2} Td (Catatan:) Tj ET`);
+  add2(`BT /F1 7.5 Tf 74 ${y2} Td (Tata tertib ini dapat diperbarui sewaktu-waktu sesuai kebijakan pemilik kost demi ketertiban bersama.) Tj ET`);
+  y2 -= 10;
+  add2(`BT /F1 7.5 Tf 36 ${y2} Td (Dengan menempati kamar, penghuni dinyatakan telah membaca, memahami, dan tunduk pada seluruh aturan yang berlaku.) Tj ET`);
+
+  // Persetujuan Digital Box (Tinggi 64 pt)
+  y2 -= 18;
+  const boxTop = y2;
+  add2("0.93 0.97 0.94 rg");
+  add2(`36 ${boxTop - 56} 523.28 62 re f`);
+  add2("0.208 0.298 0.247 RG 1 w");
+  add2(`36 ${boxTop - 56} 523.28 62 re s`);
+
+  add2("0.133 0.298 0.207 rg");
+  add2(`BT /F2 8.5 Tf 46 ${boxTop - 13} Td (LEMBAR PERNYATAAN PERSETUJUAN SEWA KOST (DISAHKAN SECARA DIGITAL):) Tj ET`);
+  add2("0.141 0.176 0.161 rg");
+  add2(`BT /F1 8 Tf 46 ${boxTop - 27} Td ("Saya menyatakan setuju untuk mematuhi seluruh tata tertib yang berlaku di kost ini, serta bersedia) Tj ET`);
+  add2(`BT /F1 8 Tf 46 ${boxTop - 39} Td (menerima seluruh sanksi yang ditetapkan apabila melakukan pelanggaran.") Tj ET`);
+  add2("0.4 0.4 0.4 rg");
+  add2(`BT /F1 7 Tf 46 ${boxTop - 51} Td (Disetujui secara digital pada: ${escapePdf(entry.timestampWib)} melalui Formulir Online https://kost-tiga-a.web.id/daftar) Tj ET`);
+
+  // Tanda Tangan & Pengesahan
+  y2 = boxTop - 76;
+  add2("0.427 0.443 0.416 rg");
+  add2(`BT /F1 8 Tf 46 ${y2} Td (Calon Penghuni / Penyewa:) Tj ET`);
+  add2(`BT /F1 8 Tf 360 ${y2} Td (Manajemen Pengelola Kost:) Tj ET`);
+
+  add2("0.141 0.176 0.161 rg");
+  add2(`BT /F2 8 Tf 46 ${y2 - 20} Td ([ TERVERIFIKASI SECARA ELEKTRONIK ]) Tj ET`);
+  add2(`BT /F2 8 Tf 360 ${y2 - 20} Td ([ TERTANDA RESMI SISTEM KOST 3A ]) Tj ET`);
+
+  add2(`BT /F2 9.5 Tf 46 ${y2 - 42} Td (${escapePdf(entry.fullName)}) Tj ET`);
+  add2(`BT /F1 7.5 Tf 46 ${y2 - 54} Td (NIK KTP: ${escapePdf(entry.nik)}) Tj ET`);
+
+  add2(`BT /F2 9.5 Tf 360 ${y2 - 42} Td (${escapePdf(entry.kost)}) Tj ET`);
+  add2(`BT /F1 7.5 Tf 360 ${y2 - 54} Td (https://kost-tiga-a.web.id) Tj ET`);
+
+  // Running Footer Page 2
+  add2("0.5 0.5 0.5 rg");
+  add2("BT /F1 7 Tf 36 26 Td (Halaman 2 dari 2  |  Dokumen Resmi Persetujuan Sewa Kost Tiga A  |  Sistem Informasi Pendaftaran Online) Tj ET");
+
+  add2("Q");
+
+  // Stream calculation
+  const s1 = p1Lines.join("\n");
+  const s2 = p2Lines.join("\n");
+  const l1 = Buffer.byteLength(s1, "latin1");
+  const l2 = Buffer.byteLength(s2, "latin1");
 
   const objects = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
-  objects[2] = "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
-  objects[3] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>";
-  objects[4] = `<< /Length ${streamLength} >>\nstream\n${streamContent}\nendstream`;
-  objects[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
-  objects[6] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  objects[2] = "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>";
+  objects[3] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 5 0 R /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> >>";
+  objects[4] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 6 0 R /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> >>";
+  objects[5] = `<< /Length ${l1} >>\nstream\n${s1}\nendstream`;
+  objects[6] = `<< /Length ${l2} >>\nstream\n${s2}\nendstream`;
+  objects[7] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objects[8] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
 
   let out = "%PDF-1.4\n";
   const offsets = [];
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 8; i++) {
     offsets[i] = Buffer.byteLength(out, "latin1");
     out += `${i} 0 obj\n${objects[i]}\nendobj\n`;
   }
   const xrefOffset = Buffer.byteLength(out, "latin1");
   out += "xref\n";
-  out += "0 7\n";
+  out += "0 9\n";
   out += "0000000000 65535 f \n";
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 8; i++) {
     out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
   }
   out += "trailer\n";
-  out += "<< /Size 7 /Root 1 0 R >>\n";
+  out += "<< /Size 9 /Root 1 0 R >>\n";
   out += "startxref\n";
   out += `${xrefOffset}\n`;
   out += "%%EOF\n";
