@@ -1009,7 +1009,7 @@ function renderAdminPage({ title, content, showNavigation = true, showLogout = f
 ${showNavigation ? `<nav class="admin-nav" aria-label="Menu admin">${links}</nav>` : ""}
 ${content}
 <footer style="margin-top:40px;padding-top:20px;border-top:1px solid var(--line);text-align:center;font-size:12px;color:var(--muted)">
-<p style="margin:0">Panel Pengelola Kost Tiga A · Terakhir diperbarui: <time datetime="2026-11-14T22:07:43+07:00">14 November 2026, 22:07:43 WIB</time></p>
+<p style="margin:0">Panel Pengelola Kost Tiga A · Terakhir diperbarui: <time datetime="2026-11-15T05:52:28+07:00">15 November 2026, 05:52:28 WIB</time></p>
 </footer>
 </main>
 </body>
@@ -1200,7 +1200,7 @@ form.login-form{display:flex;flex-direction:column;gap:16px}
       ${message ? `<p class="login-error" role="alert">${message}</p>` : ""}
       <button type="submit" class="login-btn">Masuk Dashboard</button>
     </form>
-    <p class="login-footer">Panel Pengelola Kost Tiga A<br>Terakhir diperbarui: <time datetime="2026-11-14T22:07:43+07:00">14 November 2026, 22:07:43 WIB</time></p>
+    <p class="login-footer">Panel Pengelola Kost Tiga A<br>Terakhir diperbarui: <time datetime="2026-11-15T05:52:28+07:00">15 November 2026, 05:52:28 WIB</time></p>
   </div>
 </div>
 </body>
@@ -2106,7 +2106,7 @@ h1{margin:0 0 10px;font-family:Manrope,sans-serif;font-size:clamp(26px,5vw,34px)
   </div>
 </div>
 <footer style="margin-top:40px;text-align:center;font-size:12px;color:var(--muted)">
-<p style="margin:0">Kost Tiga A · Terakhir diperbarui: <time datetime="2026-11-14T22:07:43+07:00">14 November 2026, 22:07:43 WIB</time></p>
+<p style="margin:0">Kost Tiga A · Terakhir diperbarui: <time datetime="2026-11-15T05:52:28+07:00">15 November 2026, 05:52:28 WIB</time></p>
 </footer>
 </main>
 <script>${daftarScript}</script>
