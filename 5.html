@@ -83,6 +83,20 @@
     .property { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 1.1fr); row-gap: 18px; min-height: 460px; margin-bottom: 30px; overflow: hidden; border: 1px solid #e6def4; border-radius: 24px; background: var(--white); box-shadow: 0 12px 35px rgb(61 42 102 / 7%); }
     .property-photo { position: relative; min-height: 350px; background: #ffe8e1; }
     .property-photo img { position: absolute; inset: 0; height: 100%; object-fit: cover; }
+    .photo-carousel { overflow: hidden; user-select: none; }
+    .carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
+    .carousel-track::-webkit-scrollbar { display: none; }
+    .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; min-height: 350px; scroll-snap-align: start; scroll-snap-stop: always; position: relative; }
+    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; border-radius: 50%; background: rgb(255 255 255 / 85%); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgb(0 0 0 / 12%); display: flex; align-items: center; justify-content: center; color: #1f3028; cursor: pointer; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); transition: all .15s ease; padding: 0; }
+    .carousel-btn:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
+    .carousel-btn:active { transform: translateY(-50%) scale(0.95); }
+    .carousel-prev { left: 10px; }
+    .carousel-next { right: 10px; }
+    .carousel-btn svg { width: 20px; height: 20px; }
+    .carousel-counter { position: absolute; top: 14px; left: 14px; z-index: 2; padding: 4px 10px; border-radius: 999px; background: rgb(32 26 50 / 82%); backdrop-filter: blur(4px); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+    .carousel-dots { position: absolute; bottom: 16px; right: 14px; z-index: 2; display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: rgb(0 0 0 / 40%); backdrop-filter: blur(4px); }
+    .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / 55%); border: 0; padding: 0; cursor: pointer; transition: all .2s ease; }
+    .carousel-dot.is-active { background: #fff; width: 16px; border-radius: 4px; }
     .photo-disclaimer { position: absolute; top: 14px; right: 14px; z-index: 1; padding: 6px 9px; border-radius: 999px; background: rgb(32 26 50 / 82%); color: white; font-size: 10px; font-weight: 600; }
     .photo-label { position: absolute; left: 18px; bottom: 18px; padding: 10px 14px; border: 1px solid var(--ink); border-radius: 999px; background: var(--acid); font-size: 12px; font-weight: 800; }
     .photo-label span { margin-right: 7px; color: var(--purple); }
@@ -203,6 +217,11 @@
       .properties { padding: 15px 0 58px; }
       .property { grid-template-columns: 1fr; margin-bottom: 18px; }
       .property-photo { min-height: 270px; }
+      .carousel-slide { min-height: 270px; }
+      .carousel-btn { width: 32px; height: 32px; }
+      .carousel-btn svg { width: 18px; height: 18px; }
+      .carousel-prev { left: 6px; }
+      .carousel-next { right: 6px; }
       .property-content { padding: 25px 21px; }
       .property-video { grid-template-columns: 1fr; gap: 18px; padding: 22px 18px; }
       .property-video iframe, .property-video video { width: min(100%, 280px); justify-self: center; }
@@ -333,9 +352,49 @@
 
     <section class="properties wrap" id="pilihan" aria-label="Pilihan properti">
       <article class="property">
-        <div class="property-photo">
-          <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&amp;fit=crop&amp;w=1000&amp;q=85" alt="Foto ilustrasi kamar Kost Putri: Athaya" loading="eager">
-          <span class="photo-disclaimer">Foto ilustrasi</span>
+        <div class="property-photo photo-carousel" id="carousel-athaya" aria-label="Galeri foto Kost Putri: Athaya">
+          <div class="carousel-track">
+            <div class="carousel-slide">
+              <img src="img/athaya/athaya-4.jpg" alt="Kamar Kost Putri: Athaya - Kasur dan lemari pakaian" loading="eager" decoding="async">
+            </div>
+            <div class="carousel-slide">
+              <img src="img/athaya/athaya-5.jpg" alt="Kamar Kost Putri: Athaya - Kamar ber-AC dan kamar mandi dalam" loading="lazy" decoding="async">
+            </div>
+            <div class="carousel-slide">
+              <img src="img/athaya/athaya-6.jpg" alt="Suasana kamar Kost Putri: Athaya" loading="lazy" decoding="async">
+            </div>
+            <div class="carousel-slide">
+              <img src="img/athaya/athaya-3.jpg" alt="Lorong kamar Kost Putri: Athaya yang bersih dan terang" loading="lazy" decoding="async">
+            </div>
+            <div class="carousel-slide">
+              <img src="img/athaya/athaya-1.jpg" alt="Dapur bersama Kost Putri: Athaya dengan kompor dan wastafel" loading="lazy" decoding="async">
+            </div>
+            <div class="carousel-slide">
+              <img src="img/athaya/athaya-2.jpg" alt="Kulkas dan fasilitas dapur bersama Kost Putri: Athaya" loading="lazy" decoding="async">
+            </div>
+          </div>
+
+          <button type="button" class="carousel-btn carousel-prev" aria-label="Foto sebelumnya">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button type="button" class="carousel-btn carousel-next" aria-label="Foto berikutnya">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+
+          <div class="carousel-counter" aria-live="polite">
+            <span class="carousel-current">1</span> / <span class="carousel-total">6</span>
+          </div>
+
+          <div class="carousel-dots" aria-label="Pilih foto">
+            <button type="button" class="carousel-dot is-active" aria-label="Foto 1"></button>
+            <button type="button" class="carousel-dot" aria-label="Foto 2"></button>
+            <button type="button" class="carousel-dot" aria-label="Foto 3"></button>
+            <button type="button" class="carousel-dot" aria-label="Foto 4"></button>
+            <button type="button" class="carousel-dot" aria-label="Foto 5"></button>
+            <button type="button" class="carousel-dot" aria-label="Foto 6"></button>
+          </div>
+
+          <span class="photo-disclaimer" style="background:#15803d">Foto asli</span>
           <span class="photo-label"><span>01</span> Kost Putri: Athaya</span>
         </div>
         <div class="property-content">
@@ -501,5 +560,6 @@
   <script src="counter.js?v=3" defer></script>
   <script src="wa-track.js" defer></script>
   <script src="rooms-status.js" defer></script>
+  <script src="carousel.js" defer></script>
 </body>
 </html>
