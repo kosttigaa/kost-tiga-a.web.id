@@ -17,6 +17,14 @@
       dots.forEach((dot, i) => {
         dot.classList.toggle("is-active", i === currentIndex);
       });
+      const badge = carousel.querySelector(".photo-disclaimer");
+      if (badge && slides[currentIndex]) {
+        const text = slides[currentIndex].dataset.badge;
+        if (text) {
+          badge.textContent = text;
+          badge.style.background = text === "Foto asli" ? "#15803d" : "rgb(32 26 50 / 82%)";
+        }
+      }
     }
 
     function scrollToIndex(index) {
