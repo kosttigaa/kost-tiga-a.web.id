@@ -73,7 +73,7 @@ foreach ($srv in $servers) {
   ssh -i $sshKey -o IdentitiesOnly=yes $target "chmod -R o+rX $remoteDir/dashboard/dist"
 
   Write-Output "[$srvName] Install dependensi backend dashboard di $target..."
-  ssh -i $sshKey -o IdentitiesOnly=yes $target "cd $remoteDir/dashboard/server && npm ci --omit=dev"
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "cd $remoteDir/dashboard/server && npm ci --omit=dev --prefer-offline --no-audit --no-fund"
   if ($LASTEXITCODE -ne 0) { throw "npm ci backend dashboard di $srvName gagal." }
 
   Write-Output "[$srvName] Merestart PM2..."

@@ -215,6 +215,11 @@ const server = app.listen(PORT, HOST, () => {
 
 const shutdown = () => {
   server.close(() => {
+    try {
+      db.checkpoint('TRUNCATE');
+    } catch (e) {
+      console.warn('Gagal checkpoint WAL:', e);
+    }
     db.close();
     process.exit(0);
   });

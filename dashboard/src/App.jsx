@@ -29,7 +29,6 @@ import {
   pushChanges,
   setToken,
 } from './api';
-import { downloadReceiptPdf } from './receiptPdf';
 import { useIdleTimeout } from './hooks/useIdleTimeout';
 
 // Components
@@ -432,6 +431,7 @@ export default function App() {
   const handleDownloadReceiptPdf = async () => {
     if (!receiptTrx) return;
     try {
+      const { downloadReceiptPdf } = await import('./receiptPdf');
       await downloadReceiptPdf({
         id: receiptTrx.id,
         amount: formatRupiah(receiptTrx.amount),

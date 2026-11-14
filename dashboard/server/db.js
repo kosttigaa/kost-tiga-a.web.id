@@ -87,7 +87,28 @@ const buildTable = (db, name, spec) => {
       extra TEXT NOT NULL DEFAULT '{}',
       updated_at TEXT NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS idx_${name}_seq ON ${name}(seq);
   `);
+
+  if (name === 'rooms') {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_rooms_number ON rooms(number);
+      CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
+    `);
+  } else if (name === 'tenants') {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_tenants_room_number ON tenants(room_number);
+    `);
+  } else if (name === 'transactions') {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+      CREATE INDEX IF NOT EXISTS idx_transactions_room ON transactions(room_number);
+    `);
+  } else if (name === 'complaints') {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+    `);
+  }
 
   const names = ['id', 'seq', ...columns.map((c) => c.column), 'extra', 'updated_at'];
   const values = ['@id', `(SELECT COALESCE(MAX(seq), 0) + 1 FROM ${name})`, ...columns.map((c) => `@${c.column}`), '@extra', '@updatedAt'];
@@ -107,6 +128,11 @@ export function openDatabase(file) {
   mkdirSync(path.dirname(file), { recursive: true });
   const db = new Database(file);
   db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('cache_size = -64000');
+  db.pragma('temp_store = MEMORY');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('foreign_keys = ON');
   db.exec('CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
 
   const tables = Object.fromEntries(
@@ -195,7 +221,7 @@ export function openDatabase(file) {
     readAll,
     applyChanges,
     isInitialized,
-    // Salinan konsisten seluruh database (termasuk isi WAL) untuk diunduh.
+    checkpoint: (mode = 'PASSIVE') => db.pragma(`wal_checkpoint(${mode})`),
     serialize: () => db.serialize(),
     close: () => db.close(),
   };
