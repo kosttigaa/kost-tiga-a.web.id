@@ -412,12 +412,12 @@ export default function App() {
       if (formData.registrationId || editingTenant?.registrationId) {
         const regId = formData.registrationId || editingTenant?.registrationId;
         setRegistrations(prev => prev.map(r => r.id === regId
-          ? { ...r, status: 'approved', note: `Check-in di Kamar ${targetRoomNumber}` }
+          ? { ...r, status: 'approved', note: `Check-in di ${getRoomLocation(targetRoomNumber, roomByNumber)}` }
           : r
         ));
       }
 
-      showToast(`Penghuni ${formData.name} berhasil check-in di ${getRoomLocation(targetRoomNumber, roomByNumber)}!`);
+      showToast(`✓ Berhasil Check-In! Penghuni ${formData.name} dialokasikan ke ${getRoomLocation(targetRoomNumber, roomByNumber)}.`);
     }
 
     setIsTenantModalOpen(false);
@@ -505,12 +505,18 @@ export default function App() {
   };
 
   const handleCheckInFromRegistration = (reg) => {
+    const regKostLower = (reg.kost || '').toLowerCase();
+    const loc = regKostLower.includes('athaya') ? 'athaya' : (regKostLower.includes('alya') ? 'alya' : null);
+    const matchedRoom = rooms.find(r => r.status === 'available' && (!loc || r.locationId === loc)) || rooms.find(r => r.status === 'available');
+
     setEditingTenant({
       name: reg.fullName || '',
       phone: reg.phone || '',
       ktp: reg.nik || '',
       emergencyContact: [reg.guardianName, reg.guardianPhone].filter(Boolean).join(' - '),
       registrationId: reg.id,
+      preferredKost: reg.kost || '',
+      roomNumber: matchedRoom?.number ? String(matchedRoom.number) : '',
     });
     setIsTenantModalOpen(true);
   };

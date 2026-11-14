@@ -21,7 +21,7 @@ export default function RegistrationsView({
   onDeleteRegistration,
 }) {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [kostFilter, setKostFilter] = useState('all');
   const [previewImage, setPreviewImage] = useState(null);
 
@@ -187,17 +187,6 @@ export default function RegistrationsView({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => setStatusFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-            statusFilter === 'all'
-              ? 'bg-[#1f3028] text-white shadow-sm'
-              : 'bg-white border border-[#e8e1d1] text-[#3c4540] hover:bg-[#eeeadf]'
-          }`}
-        >
-          Semua ({stats.total})
-        </button>
-        <button
-          type="button"
           onClick={() => setStatusFilter('pending')}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
             statusFilter === 'pending'
@@ -220,6 +209,17 @@ export default function RegistrationsView({
         </button>
         <button
           type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            statusFilter === 'all'
+              ? 'bg-[#1f3028] text-white shadow-sm'
+              : 'bg-white border border-[#e8e1d1] text-[#3c4540] hover:bg-[#eeeadf]'
+          }`}
+        >
+          Semua ({stats.total})
+        </button>
+        <button
+          type="button"
           onClick={() => setStatusFilter('rejected')}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
             statusFilter === 'rejected'
@@ -235,7 +235,9 @@ export default function RegistrationsView({
       <div className="bg-white rounded-xl border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-12 text-center text-[#6d716a] text-sm">
-            Tidak ada data pendaftaran yang sesuai dengan pencarian atau filter.
+            {statusFilter === 'pending'
+              ? 'Tidak ada calon penghuni yang menunggu check-in. Semua pendaftar telah diproses.'
+              : 'Tidak ada data pendaftaran yang sesuai dengan pencarian atau filter.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -355,37 +357,25 @@ export default function RegistrationsView({
 
                       <td className="py-3 px-4 align-top text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Tombol Check-In / Konversi jadi Penghuni */}
-                          {isApproved ? (
-                            <span className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 inline-flex items-center gap-1">
-                              ✓ Selesai Check-In
-                            </span>
-                          ) : !isRejected ? (
-                            <button
-                              type="button"
-                              onClick={() => onCheckInFromRegistration(item)}
-                              className="px-2.5 py-1 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm transition cursor-pointer"
-                              title="Masukkan ke daftar Penghuni (Check-In)"
-                            >
-                              <UserCheck className="w-3.5 h-3.5" /> Check-In
-                            </button>
-                          ) : null}
-
-                          {/* Tombol Ubah Status */}
+                          {/* Tombol Check-In: Selalu buka modal alokasi kamar & pembayaran sewa */}
                           {isPending && (
                             <>
                               <button
                                 type="button"
-                                onClick={() => onUpdateStatus(item.id, 'approved')}
-                                className="p-1 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition cursor-pointer"
-                                title="Tandai Disetujui"
+                                onClick={() => onCheckInFromRegistration(item)}
+                                className="px-3 py-1.5 bg-[#1f3028] hover:bg-[#354c3f] text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                                title="Pilih kamar kosong dan lakukan Check-In untuk pendaftar ini"
                               >
-                                <Check className="w-3.5 h-3.5" />
+                                <UserCheck className="w-3.5 h-3.5" /> Check-In Kamar
                               </button>
                               <button
                                 type="button"
-                                onClick={() => onUpdateStatus(item.id, 'rejected')}
-                                className="p-1 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 transition cursor-pointer"
+                                onClick={() => {
+                                  if (window.confirm(`Tolak pendaftaran atas nama ${item.fullName}?`)) {
+                                    onUpdateStatus(item.id, 'rejected');
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                                 title="Tolak Pendaftaran"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -394,23 +384,32 @@ export default function RegistrationsView({
                           )}
 
                           {isApproved && (
-                            <button
-                              type="button"
-                              onClick={() => onUpdateStatus(item.id, 'pending')}
-                              className="px-2 py-1 text-[11px] font-semibold rounded border border-[#e8e1d1] text-[#6d716a] hover:bg-[#eeeadf] transition cursor-pointer"
-                              title="Kembalikan status ke Menunggu"
-                            >
-                              Reset
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 inline-flex items-center gap-1">
+                                ✓ Selesai Check-In
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Kembalikan status pendaftaran ${item.fullName} ke status Menunggu Check-In?`)) {
+                                    onUpdateStatus(item.id, 'pending');
+                                  }
+                                }}
+                                className="px-2 py-1 text-[11px] font-semibold rounded border border-[#e8e1d1] text-[#6d716a] hover:bg-[#eeeadf] transition cursor-pointer"
+                                title="Kembalikan ke antrean pendaftar"
+                              >
+                                Buka Lagi
+                              </button>
+                            </div>
                           )}
 
                           {isRejected && (
                             <button
                               type="button"
                               onClick={() => onUpdateStatus(item.id, 'pending')}
-                              className="px-2 py-1 text-[11px] font-semibold rounded border border-[#e8e1d1] text-[#6d716a] hover:bg-[#eeeadf] transition cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-semibold rounded border border-[#e8e1d1] text-[#3c4540] hover:bg-[#eeeadf] transition cursor-pointer"
                             >
-                              Buka Lagi
+                              Pulihkan ke Menunggu
                             </button>
                           )}
 
@@ -418,7 +417,7 @@ export default function RegistrationsView({
                           <button
                             type="button"
                             onClick={() => onDeleteRegistration(item.id)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                             title="Hapus data pendaftaran"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
