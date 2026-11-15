@@ -1316,11 +1316,12 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
     return;
   }
 
-  if (isAdminPath && url.searchParams.get("data") === "registrations_csv") {
+  if (isAdminPath && (url.searchParams.get("data") === "registrations_csv" || url.searchParams.get("data") === "registrations_xls" || url.searchParams.get("data") === "registrations_xlsx")) {
     if (request.method !== "GET" && request.method !== "HEAD") {
       sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD" });
       return;
     }
+    const isXlsx = url.searchParams.get("data") === "registrations_xlsx" || url.searchParams.get("data") === "registrations_xls";
     const registrations = await readRegistrations(dataDir);
     const headers = [
       "Waktu",
@@ -1351,8 +1352,20 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       r.pdfFile ? `${basePath}/uploads/${r.pdfFile}` : (r.id ? `${basePath}/uploads/${r.id}-bukti.pdf` : "-"),
       r.agreement,
     ]);
-    const csvData = "\uFEFF" + [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
     const dateStr = new Date().toISOString().slice(0, 10);
+    if (isXlsx) {
+      const { buildXlsx } = await import("./dashboard/server/xlsx.js");
+      const rowsFormatted = rows.map((r) => r.map((c) => String(c ?? "").replace(/^'/, "")));
+      const xlsxBuffer = buildXlsx("Pendaftaran", headers, rowsFormatted);
+      response.writeHead(200, {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="pendaftaran-penghuni-${dateStr}.xlsx"`,
+      });
+      response.end(request.method === "HEAD" ? undefined : xlsxBuffer);
+      return;
+    }
+    const csvData = "\uFEFF" + [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
     response.writeHead(200, {
       "Cache-Control": "no-store",
       "Content-Type": "text/csv; charset=utf-8",

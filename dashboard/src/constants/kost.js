@@ -2,11 +2,11 @@ export const ROLE_LABELS = { admin: 'Admin', penjaga: 'Penjaga' };
 
 export const EXPORT_OPTIONS = [
   { name: 'database', label: 'Database SQLite (.db)', filename: () => `kost-tiga-a-${new Date().toISOString().slice(0, 10)}.db` },
-  { name: 'rooms.csv', label: 'Kamar (.csv)', filename: () => 'kamar.csv' },
-  { name: 'tenants.csv', label: 'Penghuni (.csv)', filename: () => 'penghuni.csv' },
-  { name: 'transactions.csv', label: 'Keuangan (.csv)', filename: () => 'keuangan.csv' },
-  { name: 'complaints.csv', label: 'Keluhan (.csv)', filename: () => 'keluhan.csv' },
-  { name: 'registrations.csv', label: 'Pendaftar (.csv)', filename: () => 'pendaftar.csv' },
+  { name: 'rooms.xlsx', label: 'Kamar (.xlsx)', filename: () => 'kamar.xlsx' },
+  { name: 'tenants.xlsx', label: 'Penghuni (.xlsx)', filename: () => 'penghuni.xlsx' },
+  { name: 'transactions.xlsx', label: 'Keuangan (.xlsx)', filename: () => 'keuangan.xlsx' },
+  { name: 'complaints.xlsx', label: 'Keluhan (.xlsx)', filename: () => 'keluhan.xlsx' },
+  { name: 'registrations.xlsx', label: 'Pendaftar (.xlsx)', filename: () => 'pendaftar.xlsx' },
 ];
 
 export const SYNC_INTERVAL_MS = 15000;

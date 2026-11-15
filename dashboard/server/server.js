@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import { COLLECTIONS, HttpError, openDatabase } from './db.js';
+import { buildXlsx } from './xlsx.js';
 
 const serverDir = import.meta.dirname;
 const envFile = path.join(serverDir, '.env');
@@ -108,7 +109,7 @@ const formatDate = (value) => {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 };
 
-const toCsv = (name, records, rooms) => {
+const createRecordFormatter = (name, rooms) => {
   const roomByNumber = new Map(rooms.map((room) => [String(room.number), room]));
   const roomLabel = (roomNumber) => {
     const raw = String(roomNumber);
@@ -122,17 +123,31 @@ const toCsv = (name, records, rooms) => {
     const escaped = String(record.roomNumber).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return record.note.replace(new RegExp(`kamar ${escaped}(?!\\d)`, 'i'), roomLabel(record.roomNumber));
   };
-  const formatCell = (key, record) => {
+  return (key, record) => {
     if (key === 'number' && name === 'rooms') return roomLabel(record.number);
     if (key === 'roomNumber') return record.roomNumber && record.roomNumber !== '-' ? roomLabel(record.roomNumber) : record.roomNumber;
     if (key === 'note') return formatNote(record);
     if (DATE_FIELDS.has(key)) return formatDate(record[key]);
-    return record[key];
+    const val = record[key];
+    return Array.isArray(val) ? val.join(', ') : val;
   };
+};
 
+const toCsv = (name, records, rooms) => {
+  const formatCell = createRecordFormatter(name, rooms);
   const keys = ['id', ...COLLECTIONS[name].fields.map(([key]) => key)];
   const lines = [keys.join(','), ...records.map((record) => keys.map((key) => csvCell(formatCell(key, record))).join(','))];
   return `\uFEFF${lines.join('\r\n')}\r\n`;
+};
+
+const toXlsx = (name, records, rooms) => {
+  const formatCell = createRecordFormatter(name, rooms);
+  const fieldTypeMap = new Map(COLLECTIONS[name].fields);
+  const keys = ['id', ...COLLECTIONS[name].fields.map(([key]) => key)];
+  const columnTypes = keys.map((key) => fieldTypeMap.get(key) || 'text');
+
+  const rows = records.map((record) => keys.map((key) => formatCell(key, record)));
+  return buildXlsx(name, keys, rows, columnTypes);
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -182,14 +197,23 @@ api.get('/export/database', requireAuth, requireAdmin, (_req, res) => {
 });
 
 api.get('/export/:name', requireAuth, requireAdmin, (req, res) => {
-  const name = req.params.name.replace(/\.csv$/, '');
-  if (!COLLECTIONS[name]) throw new HttpError(404, 'Data tidak ditemukan');
-  res.set({
-    'Content-Type': 'text/csv; charset=utf-8',
-    'Content-Disposition': `attachment; filename="kost-tiga-a-${name}-${today()}.csv"`,
-  });
+  const isCsv = /\.csv$/i.test(req.params.name);
+  const cleanName = req.params.name.replace(/\.(csv|xls|xlsx)$/i, '');
+  if (!COLLECTIONS[cleanName]) throw new HttpError(404, 'Data tidak ditemukan');
   const data = db.readAll();
-  res.send(toCsv(name, data[name], data.rooms));
+  if (isCsv) {
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="kost-tiga-a-${cleanName}-${today()}.csv"`,
+    });
+    res.send(toCsv(cleanName, data[cleanName], data.rooms));
+  } else {
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="kost-tiga-a-${cleanName}-${today()}.xlsx"`,
+    });
+    res.send(toXlsx(cleanName, data[cleanName], data.rooms));
+  }
 });
 
 const uploadsDir = path.resolve(serverDir, '../../data/uploads');

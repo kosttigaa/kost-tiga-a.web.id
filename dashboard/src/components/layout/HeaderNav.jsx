@@ -8,7 +8,7 @@ import {
   UserPlus,
   Download,
   Database,
-  FileText,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { EXPORT_OPTIONS } from '../../constants/kost';
 import Logo3A from '../common/Logo3A';
@@ -130,7 +130,7 @@ export default function HeaderNav({
                           {option.name === 'database' ? (
                             <Database className="h-4 w-4 text-[#354c3f]" />
                           ) : (
-                            <FileText className="h-4 w-4 text-[#6d716a]" />
+                            <FileSpreadsheet className="h-4 w-4 text-[#2e6930]" />
                           )}
                           {option.label}
                         </button>
