@@ -2929,6 +2929,13 @@ export function createServer({
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const envFile = path.join(publicRoot, ".env");
+  if (existsSync(envFile)) {
+    try {
+      process.loadEnvFile(envFile);
+    } catch {}
+  }
+
   const port = process.env.PORT === undefined ? 3000 : Number(process.env.PORT);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error("PORT must be an integer between 0 and 65535.");
