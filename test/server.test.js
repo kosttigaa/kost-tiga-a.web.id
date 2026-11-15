@@ -698,4 +698,22 @@ describe("static website server", () => {
       await closeTestServer(adminServer);
     }
   });
+
+  it("serves React dashboard SPA when serveDashboardSpa is enabled", async () => {
+    const spaServer = createServer({ serveDashboardSpa: true });
+    await new Promise((resolve) => spaServer.listen(0, "127.0.0.1", resolve));
+    try {
+      const origin = `http://127.0.0.1:${spaServer.address().port}`;
+      const redirectRes = await fetch(`${origin}/dashboard`, { redirect: "manual" });
+      assert.equal(redirectRes.status, 301);
+      assert.equal(redirectRes.headers.get("location"), "/dashboard/");
+
+      const pageRes = await fetch(`${origin}/dashboard/`);
+      assert.equal(pageRes.status, 200);
+      const html = await pageRes.text();
+      assert.match(html, /<div id="root"><\/div>/);
+    } finally {
+      await closeTestServer(spaServer);
+    }
+  });
 });

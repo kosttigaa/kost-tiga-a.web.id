@@ -1,7 +1,9 @@
+import { spawn } from "node:child_process";
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
 import { appendFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { createServer as createHttpServer } from "node:http";
+import { createServer as createHttpServer, request as httpRequest } from "node:http";
+import { connect } from "node:net";
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,9 +14,11 @@ const brotliCompressAsync = promisify(brotliCompress);
 const gzipAsync = promisify(gzip);
 
 const publicRoot = path.dirname(fileURLToPath(import.meta.url));
+const dashboardDistDir = path.join(publicRoot, "dashboard", "dist");
 const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
+  [".css", "text/css; charset=utf-8"],
   [".svg", "image/svg+xml"],
   [".xml", "application/xml; charset=utf-8"],
   [".txt", "text/plain; charset=utf-8"],
@@ -2760,11 +2764,94 @@ async function serveStaticFile(request, response, requestedPathOverride) {
   stream.pipe(response);
 }
 
+function proxyToDashboardApi(request, response, url) {
+  const targetPath = url.pathname.replace(/^\/dashboard/, "") + url.search;
+  const proxyReq = httpRequest(
+    {
+      hostname: "127.0.0.1",
+      port: 5000,
+      path: targetPath,
+      method: request.method,
+      headers: {
+        ...request.headers,
+        host: "127.0.0.1:5000",
+        "x-forwarded-proto": request.headers["x-forwarded-proto"] || "http",
+        "x-forwarded-for": request.socket.remoteAddress,
+      },
+    },
+    (proxyRes) => {
+      response.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(response);
+    }
+  );
+  proxyReq.on("error", (err) => {
+    console.error("Dashboard API proxy error:", err.message);
+    sendError(response, 502, "Bad Gateway: Backend dashboard API (port 5000) belum aktif atau tidak dapat dihubungi.");
+  });
+  request.pipe(proxyReq);
+}
+
+async function serveDashboardSpaFile(request, response, filePath, isHtml = false) {
+  try {
+    const fileStat = await stat(filePath);
+    if (!fileStat.isFile()) {
+      sendError(response, 404, "Not Found");
+      return;
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = contentTypes.get(ext) || (isHtml ? "text/html; charset=utf-8" : "application/octet-stream");
+    const headers = {
+      "Content-Type": contentType,
+      "Content-Length": fileStat.size,
+      "X-Content-Type-Options": "nosniff",
+    };
+    if (isHtml) {
+      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    } else {
+      headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    }
+    if (request.method === "HEAD") {
+      response.writeHead(200, headers);
+      response.end();
+      return;
+    }
+    response.writeHead(200, headers);
+    createReadStream(filePath).pipe(response);
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      sendError(response, 404, "Not Found");
+    } else {
+      console.error("Error serving dashboard SPA file:", err);
+      sendError(response, 500, "Internal Server Error");
+    }
+  }
+}
+
+function ensureDashboardApiServer() {
+  const socket = connect(5000, "127.0.0.1", () => {
+    socket.destroy();
+  });
+  socket.on("error", () => {
+    const apiServerPath = path.join(publicRoot, "dashboard", "server", "server.js");
+    if (existsSync(apiServerPath)) {
+      console.log("Memulai backend API dashboard di port 5000...");
+      const child = spawn(process.execPath, [apiServerPath], {
+        cwd: path.dirname(apiServerPath),
+        stdio: "inherit",
+        detached: false,
+      });
+      child.on("error", (err) => console.error("Gagal memulai backend dashboard:", err));
+      process.on("exit", () => child.kill());
+    }
+  });
+}
+
 export function createServer({
   dataDir = process.env.DATA_DIR || path.join(publicRoot, "data"),
   adminSecret = process.env.ADMIN_SECRET,
   adminUser = process.env.ADMIN_USER,
   adminPassword = process.env.ADMIN_PASSWORD,
+  serveDashboardSpa = false,
 } = {}) {
   if (Boolean(adminUser) !== Boolean(adminPassword)) {
     throw new Error("ADMIN_USER and ADMIN_PASSWORD must be configured together.");
@@ -2813,6 +2900,27 @@ export function createServer({
       return;
     } else if (pathname.startsWith("/admin/uploads/") || pathname.startsWith("/dashboard/uploads/")) {
       handler = handleKtpDownload(request, response, dataDir, adminAuth, adminSessions);
+    } else if (serveDashboardSpa && (pathname === "/dashboard" || pathname.startsWith("/dashboard/"))) {
+      if (pathname === "/dashboard") {
+        response.writeHead(301, { Location: "/dashboard/", "Cache-Control": "no-cache" });
+        response.end();
+        return;
+      }
+      if (pathname.startsWith("/dashboard/api/")) {
+        proxyToDashboardApi(request, response, new URL(request.url, "http://localhost"));
+        return;
+      }
+      if (pathname.startsWith("/dashboard/assets/")) {
+        const assetName = path.basename(pathname);
+        const assetPath = path.join(dashboardDistDir, "assets", assetName);
+        handler = serveDashboardSpaFile(request, response, assetPath);
+      } else if (pathname === "/dashboard/favicon.svg" || pathname === "/dashboard/apple-touch-icon.png") {
+        const iconPath = path.join(dashboardDistDir, path.basename(pathname));
+        handler = serveDashboardSpaFile(request, response, iconPath);
+      } else {
+        const indexPath = path.join(dashboardDistDir, "index.html");
+        handler = serveDashboardSpaFile(request, response, indexPath, true);
+      }
     } else if (pathname === "/admin" || pathname === "/admin/" || pathname === "/dashboard" || pathname === "/dashboard/") {
       handler = handleAdminDashboard(request, response, dataDir, accessLogs, adminAuth, adminSessions);
     } else if (legacyAdminRoutes.has(pathname)) {
@@ -2852,12 +2960,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     } catch {}
   }
 
+  ensureDashboardApiServer();
+
   const port = process.env.PORT === undefined ? 3000 : Number(process.env.PORT);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error("PORT must be an integer between 0 and 65535.");
   }
 
-  const server = createServer();
+  const server = createServer({ serveDashboardSpa: true });
   server.on("error", (error) => {
     console.error("Unable to start the web server:", error);
     process.exitCode = 1;
