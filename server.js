@@ -944,9 +944,6 @@ nav.admin-nav a,nav.admin-nav button{min-height:42px;padding:0 8px;font-size:12p
 nav.admin-nav form{grid-column:1/-1;margin:0}
 nav.admin-nav button{width:100%}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-#registrations .table-wrap table{min-width:780px}
-#registrations .toolbar{flex-direction:column}
-#registrations .ktp-btn{padding:6px 12px;font-size:11px}
 #logs .table-wrap{overflow:visible;border:0;background:none;box-shadow:none}
 #logs .table-wrap table{min-width:0}
 #logs thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -967,7 +964,6 @@ const adminLinks = [
   ["/admin#logs", "Log akses"],
   ["/admin#stats", "Statistik"],
   ["/admin#rooms", "Kamar kosong"],
-  ["/admin#registrations", "Pendaftaran"],
 ];
 const legacyAdminRoutes = new Map([
   ["/admin/logs", "/admin#logs"],
@@ -981,7 +977,6 @@ function renderAdminPage({ title, content, showNavigation = true, showLogout = f
     [basePath + "#logs", "Log akses"],
     [basePath + "#stats", "Statistik"],
     [basePath + "#rooms", "Kamar kosong"],
-    [basePath + "#registrations", "Pendaftaran"],
   ]
     .map(([href, label], index) => `<a href="${href}"${index === 0 ? ' aria-current="page"' : ""}>${label}</a>`)
     .join("") + (showLogout ? `<form method="post" action="${basePath}"><input type="hidden" name="action" value="logout"><button type="submit">Keluar</button></form>` : "");
@@ -1240,7 +1235,7 @@ function getBrowser(userAgent){const browsers=[["Edge",/Edg(?:e|A|iOS)?\\/([\\d.
 function renderEntries(){const query=searchElement.value.trim().toLowerCase(),visible=entries.filter(entry=>(entry.ip+" "+entry.path+" "+entry.browser+" "+entry.method+" "+entry.status).toLowerCase().includes(query)),pages=Math.max(1,Math.ceil(visible.length/pageSize));currentPage=Math.min(currentPage,pages);const start=(currentPage-1)*pageSize,items=visible.slice(start,start+pageSize);entriesElement.replaceChildren();pageInfoElement.textContent="Halaman "+currentPage+" dari "+pages;previousPageButton.disabled=currentPage===1;nextPageButton.disabled=currentPage===pages;statusElement.textContent=visible.length?"Menampilkan "+(start+1)+"-"+(start+items.length)+" dari "+visible.length+" request.":"Menampilkan 0 dari "+(entries.length?"hasil pencarian":"request");if(!items.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.className="empty";cell.colSpan=6;cell.textContent=entries.length?"Tidak ada hasil yang cocok.":"Belum ada request tercatat.";row.append(cell);entriesElement.append(row);return}for(const entry of items){const row=document.createElement("tr"),time=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"medium",timeStyle:"medium"}).format(new Date(entry.time))+" WIB";for(const [value,className,label] of [[entry.ip,"ip","IP"],[time,"time","Waktu WIB"],[entry.path,"path","Halaman"],[getBrowser(entry.userAgent),"browser","Browser"],[entry.method,"","Metode"],[String(entry.status),"status-code","Status"]]){const cell=document.createElement("td");cell.className=className;cell.dataset.label=label;cell.textContent=value;row.append(cell)}entriesElement.append(row)}}
 async function loadLog(){statusElement.textContent="Memuat log...";try{const base=location.pathname.startsWith("/dashboard")?"/dashboard":"/admin";const response=await fetch(base+"?data=logs",{cache:"no-store",credentials:"same-origin"});if(!response.ok)throw new Error("HTTP "+response.status);entries=await response.json();currentPage=1;renderEntries()}catch{entries=[];currentPage=1;renderEntries();statusElement.textContent="Log gagal dimuat. Pastikan autentikasi berhasil, lalu muat ulang."}}
 const sections=[...document.querySelectorAll(".dashboard-section")],tabs=[...document.querySelectorAll(".admin-nav a")];function activateSection(id){const active=sections.some(section=>section.id===id)?id:"logs";for(const section of sections)section.hidden=section.id!==active;for(const tab of tabs){if(tab.hash==="#"+active)tab.setAttribute("aria-current","page");else tab.removeAttribute("aria-current")}}for(const tab of tabs)tab.addEventListener("click",event=>{event.preventDefault();const id=tab.hash.slice(1);if(location.hash!=="#"+id)history.pushState(null,"","#"+id);activateSection(id)});addEventListener("hashchange",()=>activateSection(location.hash.slice(1)));activateSection(location.hash.slice(1)||"logs");
-document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});const regSearch=document.getElementById("reg-search");if(regSearch){regSearch.addEventListener("input",()=>{const q=regSearch.value.trim().toLowerCase();for(const tr of document.querySelectorAll("#reg-entries tr")){tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"}})}loadLog();`;
+document.getElementById("refresh").addEventListener("click",loadLog);previousPageButton.addEventListener("click",()=>{currentPage--;renderEntries()});nextPageButton.addEventListener("click",()=>{currentPage++;renderEntries()});searchElement.addEventListener("input",()=>{currentPage=1;renderEntries()});loadLog();`;
 
 function dashboardCsp() {
   const hash = createHash("sha256").update(dashboardScript).digest("base64");
@@ -1421,11 +1416,10 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
     return;
   }
   const now = new Date();
-  const [clickText, visitorText, rooms, registrations] = await Promise.all([
+  const [clickText, visitorText, rooms] = await Promise.all([
     readOptional(path.join(dataDir, "clicks.jsonl")),
     readOptional(path.join(dataDir, "visitors.json")),
     readRooms(dataDir),
-    readRegistrations(dataDir),
   ]);
   let visitors = 0;
   try {
@@ -1437,7 +1431,6 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
 ${renderLogsSection()}
 ${renderStatsPage({ clicks: summarizeClicks(clickText, now), visitors, rooms, now })}
 <section id="rooms" class="dashboard-section" aria-labelledby="rooms-title" hidden><p class="eyebrow">Administrasi situs</p><h1 id="rooms-title">Kamar kosong</h1><p class="intro">Atur jumlah kamar kosong. Angka 0 tampil "penuh"; kosongkan kolom untuk tidak menampilkan tipe. ${rooms.updatedAt ? `Terakhir diperbarui ${escapeHtml(rooms.updatedAt)}.` : "Belum pernah diatur."}</p>${renderRoomsForm(rooms, notice, basePath)}</section>
-${renderRegistrationsSection(registrations, basePath)}
 <script>${dashboardScript}</script>`;
   const body = renderAdminPage({ title: "Dashboard", content, showLogout: Boolean(getAdminSession(request, sessions)), basePath });
   response.writeHead(200, adminPageHeaders(body));
@@ -1469,83 +1462,6 @@ async function saveRooms(dataDir, counts) {
   return task;
 }
 
-
-function renderRegistrationsSection(registrations, basePath = "/admin") {
-  const rows = registrations.length
-    ? registrations
-        .map((r) => {
-          const time =
-            new Intl.DateTimeFormat("id-ID", {
-              timeZone: "Asia/Jakarta",
-              dateStyle: "medium",
-              timeStyle: "short",
-            }).format(new Date(r.timestamp)) + " WIB";
-          const ktpLink = r.ktpImage
-            ? `<a href="${basePath}/uploads/${encodeURIComponent(r.ktpImage)}" target="_blank" rel="noopener noreferrer" class="ktp-btn">Lihat KTP</a>`
-            : "-";
-          const cleanWa = String(r.phone || "").replace(/\D/g, "");
-          const waPhone = cleanWa.startsWith("0") ? "62" + cleanWa.slice(1) : cleanWa;
-          const waLink = cleanWa
-            ? `<a href="https://wa.me/${waPhone}" target="_blank" rel="noopener noreferrer" class="wa-link">${escapeHtml(r.phone)}</a>`
-            : escapeHtml(r.phone);
-          const cleanWaliWa = String(r.guardianPhone || "").replace(/\D/g, "");
-          const waliWaPhone = cleanWaliWa.startsWith("0") ? "62" + cleanWaliWa.slice(1) : cleanWaliWa;
-          const waliWaLink = cleanWaliWa
-            ? `<a href="https://wa.me/${waliWaPhone}" target="_blank" rel="noopener noreferrer" class="wa-link">${escapeHtml(r.guardianPhone)}</a>`
-            : escapeHtml(r.guardianPhone);
-
-          const pdfFile = r.pdfFile || (r.id ? `${r.id}-bukti.pdf` : "");
-          const pdfLink = pdfFile
-            ? `<a href="${basePath}/uploads/${encodeURIComponent(pdfFile)}" target="_blank" rel="noopener noreferrer" class="ktp-btn">Unduh PDF</a>`
-            : "-";
-
-          return `<tr>
-<td class="time">${escapeHtml(time)}</td>
-<td><strong>${escapeHtml(r.kost)}</strong></td>
-<td>${escapeHtml(r.fullName)}</td>
-<td><code>${escapeHtml(r.nik)}</code></td>
-<td>${waLink}</td>
-<td>${escapeHtml(r.guardianName)}<br><small class="muted">${waliWaLink}</small></td>
-<td>${escapeHtml(r.address)}</td>
-<td>${escapeHtml(r.vehicle || "-")}</td>
-<td>${ktpLink}</td>
-<td>${pdfLink}</td>
-</tr>`;
-        })
-        .join("")
-    : `<tr><td class="empty" colspan="10">Belum ada data pendaftaran penghuni.</td></tr>`;
-
-  return `<section id="registrations" class="dashboard-section" aria-labelledby="reg-title" hidden>
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px">
-  <div>
-    <p class="eyebrow">Administrasi situs</p>
-    <h1 id="reg-title">Pendaftaran Penghuni</h1>
-    <p class="intro" style="margin-bottom:0">Data calon penghuni yang telah mengisi formulir pendaftaran (${registrations.length} pendaftar).</p>
-  </div>
-  <a href="${basePath}?data=registrations_csv" class="ktp-btn" style="padding:8px 16px;font-size:13px">📥 Unduh CSV (Excel)</a>
-</div>
-<div class="toolbar" style="margin-top:14px">
-  <input id="reg-search" type="search" aria-label="Cari data pendaftar" placeholder="Cari nama, NIK, kost, kota, atau nomor WhatsApp...">
-</div>
-<div class="table-wrap"><table>
-<thead><tr>
-  <th scope="col">Waktu</th>
-  <th scope="col">Pilihan Kost</th>
-  <th scope="col">Nama Lengkap</th>
-  <th scope="col">NIK</th>
-  <th scope="col">No. WA</th>
-  <th scope="col">Orang Tua / Wali</th>
-  <th scope="col">Alamat Asal</th>
-  <th scope="col">Kendaraan</th>
-  <th scope="col">KTP</th>
-  <th scope="col">Arsip PDF</th>
-</tr></thead>
-<tbody id="reg-entries">
-${rows}
-</tbody>
-</table></div>
-</section>`;
-}
 
 function renderRoomsForm(rooms, message, basePath = "/admin") {
   const typeLabels = { ac: "AC", nonac: "Non-AC" };

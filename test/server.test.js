@@ -684,15 +684,16 @@ describe("static website server", () => {
       assert.match(csvText, /Kost Putri: Alya/);
       assert.match(csvText, /bukti\.pdf/);
 
-      // 8. Verify dashboard includes #registrations section and PDF link
+      // 8. Verify /admin does not include duplicate #registrations (handled by /dashboard)
       const dashRes = await fetch(`${adminBaseUrl}/admin`, {
         headers: { "X-Admin-Secret": "secret-key" },
       });
       assert.equal(dashRes.status, 200);
       const dashHtml = await dashRes.text();
-      assert.match(dashHtml, /id="registrations"/);
-      assert.match(dashHtml, /Syifa Kamila/);
-      assert.match(dashHtml, /Unduh PDF/);
+      assert.match(dashHtml, /id="logs"/);
+      assert.match(dashHtml, /id="stats"/);
+      assert.match(dashHtml, /id="rooms"/);
+      assert.doesNotMatch(dashHtml, /id="registrations"/);
     } finally {
       await closeTestServer(adminServer);
     }
