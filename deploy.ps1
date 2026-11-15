@@ -66,10 +66,14 @@ foreach ($srv in $servers) {
 
   Write-Output "[$srvName] Mengirim dist dashboard ke $target..."
   $dashDist = Join-Path $PSScriptRoot 'dashboard\dist'
-  ssh -i $sshKey -o IdentitiesOnly=yes $target "mkdir -p $remoteDir/dashboard/dist"
-  cmd /c "tar -cf - -C `"$dashDist`" . | ssh -i `"$sshKey`" -o IdentitiesOnly=yes $target tar -xf - -C $remoteDir/dashboard/dist"
-  if ($LASTEXITCODE -ne 0) { throw "Pengiriman dist dashboard ke $srvName gagal." }
-  ssh -i $sshKey -o IdentitiesOnly=yes $target "chmod -R o+rX $remoteDir/dashboard/dist"
+  $tarTmp = Join-Path $env:TEMP ("dashboard-dist-{0}.tar.gz" -f [Guid]::NewGuid().ToString('N'))
+  tar -czf $tarTmp -C "$dashDist" .
+  if ($LASTEXITCODE -ne 0) { throw "Pembuatan arsip dist dashboard gagal." }
+  scp -i $sshKey -o IdentitiesOnly=yes $tarTmp "${target}:/tmp/dashboard-dist.tar.gz"
+  Remove-Item -Force $tarTmp -ErrorAction SilentlyContinue
+  if ($LASTEXITCODE -ne 0) { throw "Upload dist dashboard ke $srvName gagal." }
+  ssh -i $sshKey -o IdentitiesOnly=yes $target "mkdir -p $remoteDir/dashboard/dist && tar -xzf /tmp/dashboard-dist.tar.gz -C $remoteDir/dashboard/dist && rm -f /tmp/dashboard-dist.tar.gz && chmod -R o+rX $remoteDir/dashboard/dist"
+  if ($LASTEXITCODE -ne 0) { throw "Ekstraksi dist dashboard di $srvName gagal." }
 
   Write-Output "[$srvName] Install dependensi backend dashboard di $target..."
   ssh -i $sshKey -o IdentitiesOnly=yes $target "cd $remoteDir/dashboard/server && npm ci --omit=dev --prefer-offline --no-audit --no-fund"
