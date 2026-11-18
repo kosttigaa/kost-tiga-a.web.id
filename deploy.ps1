@@ -50,7 +50,8 @@ if ($LASTEXITCODE -ne 0) { throw "Build dashboard gagal." }
 Pop-Location
 
 $servers = @(
-  @{ Name = 'VPS Baru (Utama)'; Host = 'admin@162.35.43.69' }
+  @{ Name = 'VPS Utama'; Host = 'admin@162.35.43.69' },
+  @{ Name = 'VPS Backup'; Host = 'admin@147.139.130.126' }
 )
 $remoteDir = '/var/www/kost-tiga-a.web.id'
 
