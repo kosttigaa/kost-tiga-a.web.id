@@ -55,8 +55,13 @@ $servers = @(
 )
 $remoteDir = '/var/www/kost-tiga-a.web.id'
 
+Write-Output "Mengirim perubahan ke GitHub origin (kosttigaa)..."
 git push origin "HEAD:refs/heads/$branch"
-if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub gagal." }
+if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub origin gagal." }
+
+Write-Output "Mengirim perubahan ke GitHub personal (iamhernawan)..."
+git push personal "HEAD:refs/heads/$branch"
+if ($LASTEXITCODE -ne 0) { throw "Push branch '$branch' ke GitHub personal gagal." }
 
 foreach ($srv in $servers) {
   $target = $srv.Host
