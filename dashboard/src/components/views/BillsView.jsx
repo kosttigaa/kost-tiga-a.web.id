@@ -20,6 +20,8 @@ import {
   getRoomDisplayNumber,
   getRoomLocation,
   getRoomTypeLabel,
+  computeDueDateForMonth,
+  isTenantPaidForMonth,
 } from '../../utils/formatters';
 
 const MONTH_NAMES = [
@@ -92,16 +94,6 @@ export default function BillsView({
     setActiveMonth(currentMonth);
   };
 
-  // Helper untuk mendapatkan due date pada bulan yang aktif (YYYY-MM-DD)
-  const computeDueDateForMonth = (tenant, year, month) => {
-    const base = tenant.dueDate || tenant.entryDate || '2026-01-01';
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(base));
-    const dayNum = match ? parseInt(match[3], 10) : 1;
-    const maxDays = new Date(year, month + 1, 0).getDate();
-    const safeDay = Math.min(Math.max(1, dayNum), maxDays);
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
-  };
-
   // Hitung data tagihan untuk bulan yang aktif
   const bills = useMemo(() => {
     const list = tenants.map((tenant) => {
@@ -142,16 +134,8 @@ export default function BillsView({
       if (manualStatus) {
         // Jika admin pernah mengubah status secara spesifik untuk bulan ini
         effectiveStatus = manualStatus;
-      } else if (tenant.lastPaidMonth === activeMonthKey || Boolean(matchingReceipt)) {
-        // Jika lunas lewat pencatatan kas/transaksi sewa di bulan ini
-        effectiveStatus = 'paid';
-      } else if (
-        tenant.paymentStatus === 'paid' &&
-        tenant.dueDate &&
-        tenant.dueDate.startsWith(activeMonthKey) &&
-        !tenant.lastPaidMonth
-      ) {
-        // Fallback jika tenant baru dibuat dan diset Lunas di bulan ini
+      } else if (isTenantPaidForMonth(tenant, activeMonthKey, transactions)) {
+        // Jika lunas lewat transaksi sewa, status paid bulan ini, atau konfirmasi admin
         effectiveStatus = 'paid';
       } else {
         // Default: BELUM BAYAR

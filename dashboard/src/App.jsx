@@ -14,6 +14,8 @@ import {
   getRoomLocation,
   formatTransactionNote,
   getNextTransactionId,
+  computeDueDateForMonth,
+  isTenantPaidForMonth,
 } from './utils/formatters';
 import { migrateRoomLocations, readLocalData } from './utils/migration';
 import {
@@ -336,24 +338,26 @@ export default function App() {
     const curMonth = now.getMonth();
     const currentMonthKey = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
 
-    return tenants.filter(t => {
-      if (t.monthlyStatus?.[currentMonthKey] === 'paid' || t.lastPaidMonth === currentMonthKey) {
-        return false;
-      }
-      if (t.monthlyStatus?.[currentMonthKey] === 'overdue' || t.paymentStatus === 'overdue') {
-        return true;
-      }
-      const base = t.dueDate || t.entryDate;
-      const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(base ?? ''));
-      const dayNum = match ? parseInt(match[3], 10) : 1;
-      const maxDays = new Date(curYear, curMonth + 1, 0).getDate();
-      const safeDay = Math.min(Math.max(1, dayNum), maxDays);
-      const dueThisMonth = new Date(curYear, curMonth, safeDay);
-      dueThisMonth.setHours(0, 0, 0, 0);
+    // Hanya tampilkan penghuni yang statusnya BELUM BAYAR pada bulan berjalan (sysdate)
+    const unpaid = tenants.filter(t => !isTenantPaidForMonth(t, currentMonthKey, transactions));
 
-      return now >= dueThisMonth || t.paymentStatus === 'pending';
+    const mapped = unpaid.map(t => {
+      const dueDateThisMonth = computeDueDateForMonth(t, curYear, curMonth);
+      const dueObj = new Date(dueDateThisMonth + 'T00:00:00');
+      const isOverdue = now > dueObj || t.monthlyStatus?.[currentMonthKey] === 'overdue' || t.paymentStatus === 'overdue';
+
+      return {
+        ...t,
+        dueDate: dueDateThisMonth,
+        effectivePaymentStatus: isOverdue ? 'overdue' : 'pending',
+      };
     });
-  }, [tenants]);
+
+    // Urutkan ascending berdasarkan due date pada bulan sysdate
+    mapped.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+    return mapped;
+  }, [tenants, transactions]);
 
   // Room Actions
   const handleSaveRoom = (roomData) => {

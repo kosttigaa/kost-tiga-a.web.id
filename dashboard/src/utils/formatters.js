@@ -49,3 +49,42 @@ export const getNextTransactionId = (transactions) => {
   return `TRX-${String(highestId + 1).padStart(5, '0')}`;
 };
 
+export const computeDueDateForMonth = (tenant, year, month) => {
+  const base = tenant?.dueDate || tenant?.entryDate || '2026-01-01';
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(base));
+  const dayNum = match ? parseInt(match[3], 10) : 1;
+  const maxDays = new Date(year, month + 1, 0).getDate();
+  const safeDay = Math.min(Math.max(1, dayNum), maxDays);
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+};
+
+export const isTenantPaidForMonth = (tenant, monthKey, transactions = []) => {
+  if (!tenant) return false;
+
+  // 1. Status spesifik bulan ini yang diupdate admin
+  if (tenant.monthlyStatus?.[monthKey] === 'paid') return true;
+  if (tenant.lastPaidMonth === monthKey) return true;
+  if (tenant.monthlyStatus?.[monthKey] === 'pending' || tenant.monthlyStatus?.[monthKey] === 'overdue') {
+    return false;
+  }
+
+  // 2. Transaksi pemasukan sewa kamar di bulan ini
+  const hasIncomeTrx = transactions.some(
+    (trx) =>
+      trx.type === 'income' &&
+      (trx.category === 'Sewa Kamar' || !trx.category) &&
+      trx.date?.startsWith(monthKey) &&
+      (trx.tenantName === tenant.name || String(trx.roomNumber) === String(tenant.roomNumber))
+  );
+  if (hasIncomeTrx) return true;
+
+  // 3. Status dasar tenant adalah 'paid' pada bulan yang sama atau siklus sewa aktif
+  if (tenant.paymentStatus === 'paid') {
+    if (!tenant.dueDate || tenant.dueDate.startsWith(monthKey) || !tenant.lastPaidMonth) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
