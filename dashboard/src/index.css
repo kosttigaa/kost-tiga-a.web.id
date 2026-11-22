@@ -96,6 +96,15 @@ textarea {
   font: inherit;
 }
 
+/* Sembunyikan scrollbar untuk navigasi tab horizontal */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @media print {
   body {
     background: white !important;
