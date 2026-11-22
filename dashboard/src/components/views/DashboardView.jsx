@@ -130,7 +130,7 @@ export default function DashboardView({
             </div>
             <button
               type="button"
-              onClick={() => onSelectTab('tenants')}
+              onClick={() => onSelectTab('bills')}
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
             >
               Lihat Semua

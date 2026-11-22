@@ -6,6 +6,7 @@ export default function TransactionModal({
   onClose,
   rooms,
   roomByNumber,
+  initialData = null,
   onSave,
 }) {
   if (!isOpen) return null;
@@ -32,6 +33,7 @@ export default function TransactionModal({
             <label className="text-xs font-semibold text-slate-600 block mb-1">Jenis Transaksi</label>
             <select
               name="type"
+              defaultValue={initialData?.type || 'income'}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none font-medium"
             >
               <option value="income">🟢 Pemasukan (+)</option>
@@ -44,7 +46,7 @@ export default function TransactionModal({
               type="date"
               required
               name="date"
-              defaultValue={new Date().toISOString().split('T')[0]}
+              defaultValue={initialData?.date || new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             />
           </div>
@@ -54,6 +56,7 @@ export default function TransactionModal({
           <label className="text-xs font-semibold text-slate-600 block mb-1">Kategori Transaksi</label>
           <select
             name="category"
+            defaultValue={initialData?.category || 'Sewa Kamar'}
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
           >
             <option value="Sewa Kamar">Sewa Kamar Bulanan</option>
@@ -72,6 +75,7 @@ export default function TransactionModal({
             required
             type="number"
             name="amount"
+            defaultValue={initialData?.amount || ''}
             placeholder="Misal: 1500000"
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none font-bold"
           />
@@ -82,6 +86,7 @@ export default function TransactionModal({
             <label className="text-xs font-semibold text-slate-600 block mb-1">Nomor Kamar (Opsional)</label>
             <select
               name="roomNumber"
+              defaultValue={initialData?.roomNumber ? String(initialData.roomNumber) : '-'}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             >
               <option value="-">Umum</option>
@@ -94,6 +99,7 @@ export default function TransactionModal({
             <label className="text-xs font-semibold text-slate-600 block mb-1">Nama Penghuni (Opsional)</label>
             <input
               name="tenantName"
+              defaultValue={initialData?.tenantName || ''}
               placeholder="Nama penyewa"
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
             />
@@ -105,6 +111,7 @@ export default function TransactionModal({
           <textarea
             name="note"
             rows={2}
+            defaultValue={initialData?.note || ''}
             placeholder="Keterangan rincian pembayaran..."
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none"
           />

@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   BedDouble,
   Users,
+  Receipt,
   CreditCard,
   Wrench,
   UserPlus,
@@ -17,6 +18,7 @@ const TAB_CONFIG = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'rooms', label: 'Kamar', icon: BedDouble },
   { id: 'tenants', label: 'Penghuni', icon: Users },
+  { id: 'bills', label: 'Tagihan', icon: Receipt },
   { id: 'registrations', label: 'Pendaftar', icon: UserPlus },
   { id: 'finance', label: 'Keuangan', icon: CreditCard },
   { id: 'complaints', label: 'Keluhan', icon: Wrench },
@@ -89,6 +91,11 @@ export default function HeaderNav({
                 )}
                 {id === 'tenants' && overdueCount > 0 && (
                   <span className="rounded-full bg-rose-100 px-1.5 py-0.2 text-[10px] text-rose-700 font-bold border border-rose-200">
+                    {overdueCount}
+                  </span>
+                )}
+                {id === 'bills' && overdueCount > 0 && (
+                  <span className="rounded-full bg-rose-600 text-white px-1.5 py-0.2 text-[10px] font-extrabold shadow-sm">
                     {overdueCount}
                   </span>
                 )}

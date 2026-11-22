@@ -10,8 +10,6 @@ export default function TenantModal({
   roomByNumber,
   onSave,
 }) {
-  if (!isOpen) return null;
-
   const isEditing = Boolean(editingTenant?.id);
   const isFromRegistration = Boolean(editingTenant?.registrationId);
 
@@ -43,6 +41,8 @@ export default function TenantModal({
   }, [selectedRoomNumber, roomByNumber, availableRooms]);
 
   const [firstPayment, setFirstPayment] = useState(() => selectedRoomObj?.price || 1200000);
+
+  if (!isOpen) return null;
 
   const handleRoomChange = (e) => {
     const val = e.target.value;

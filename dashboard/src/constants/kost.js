@@ -15,8 +15,8 @@ export const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit tidak ada aktivitas
 export const LAST_ACTIVITY_KEY = 'juragankost_last_activity';
 
 export const ROLE_TABS = {
-  admin: ['dashboard', 'rooms', 'tenants', 'finance', 'complaints', 'registrations'],
-  penjaga: ['rooms', 'tenants', 'complaints', 'registrations'],
+  admin: ['dashboard', 'rooms', 'tenants', 'bills', 'finance', 'complaints', 'registrations'],
+  penjaga: ['rooms', 'tenants', 'bills', 'complaints', 'registrations'],
 };
 
 export const LOCATION_NAMES = {

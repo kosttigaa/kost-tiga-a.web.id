@@ -38,6 +38,7 @@ import HeaderNav from './components/layout/HeaderNav';
 import DashboardView from './components/views/DashboardView';
 import RoomsView from './components/views/RoomsView';
 import TenantsView from './components/views/TenantsView';
+import BillsView from './components/views/BillsView';
 import FinanceView from './components/views/FinanceView';
 import ComplaintsView from './components/views/ComplaintsView';
 import RegistrationsView from './components/views/RegistrationsView';
@@ -113,6 +114,7 @@ export default function App() {
   const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
   const [isTrxModalOpen, setIsTrxModalOpen] = useState(false);
+  const [trxInitialData, setTrxInitialData] = useState(null);
   const [receiptTrx, setReceiptTrx] = useState(null);
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
 
@@ -327,10 +329,31 @@ export default function App() {
 
   const netProfit = totalIncome - totalExpense;
 
-  const overdueTenants = useMemo(
-    () => tenants.filter(t => t.paymentStatus === 'overdue' || t.paymentStatus === 'pending'),
-    [tenants]
-  );
+  const overdueTenants = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    const currentMonthKey = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
+
+    return tenants.filter(t => {
+      if (t.monthlyStatus?.[currentMonthKey] === 'paid' || t.lastPaidMonth === currentMonthKey) {
+        return false;
+      }
+      if (t.monthlyStatus?.[currentMonthKey] === 'overdue' || t.paymentStatus === 'overdue') {
+        return true;
+      }
+      const base = t.dueDate || t.entryDate;
+      const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(base ?? ''));
+      const dayNum = match ? parseInt(match[3], 10) : 1;
+      const maxDays = new Date(curYear, curMonth + 1, 0).getDate();
+      const safeDay = Math.min(Math.max(1, dayNum), maxDays);
+      const dueThisMonth = new Date(curYear, curMonth, safeDay);
+      dueThisMonth.setHours(0, 0, 0, 0);
+
+      return now >= dueThisMonth || t.paymentStatus === 'pending';
+    });
+  }, [tenants]);
 
   // Room Actions
   const handleSaveRoom = (roomData) => {
@@ -432,13 +455,47 @@ export default function App() {
     showToast(`Penghuni ${tenant.name} dari ${getRoomLocation(tenant.roomNumber, roomByNumber)} telah check-out.`);
   };
 
-  const handleSendWhatsAppReminder = (tenant) => {
+  const handleSendWhatsAppReminder = (tenant, dueDateOverride = null) => {
     const room = roomByNumber.get(String(tenant.roomNumber));
     const nominal = room ? formatRupiah(room.price) : 'Rp 0';
-    const msg = `Halo Kak ${tenant.name},\n\nSalam dari Manajemen Kost Tiga A. Kami ingin menginfokan bahwa sewa ${getRoomLocation(tenant.roomNumber, roomByNumber)} jatuh tempo pada *${formatDate(tenant.dueDate)}* sebesar *${nominal}*.\n\nMohon konfirmasi pembayaran jika sudah ditransfer ya. Terima kasih! 🙏`;
+    const targetDue = dueDateOverride || tenant.dueDate;
+    const msg = `Halo Kak ${tenant.name},\n\nSalam dari Manajemen Kost Tiga A. Kami ingin menginfokan bahwa sewa ${getRoomLocation(tenant.roomNumber, roomByNumber)} jatuh tempo pada *${formatDate(targetDue)}* sebesar *${nominal}*.\n\nMohon konfirmasi pembayaran jika sudah ditransfer ya. Terima kasih! 🙏`;
     let phone = tenant.phone.replace(/[^0-9]/g, '');
     if (phone.startsWith('0')) phone = '62' + phone.substring(1);
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handlePayBill = (tenant, dueDateForMonth = null) => {
+    const room = roomByNumber.get(String(tenant.roomNumber));
+    const targetDue = dueDateForMonth || tenant.dueDate;
+    setTrxInitialData({
+      type: 'income',
+      category: 'Sewa Kamar',
+      amount: room ? room.price : '',
+      roomNumber: tenant.roomNumber,
+      tenantName: tenant.name,
+      note: `Pembayaran sewa ${getRoomLocation(tenant.roomNumber, roomByNumber)} periode jatuh tempo ${formatDate(targetDue)}`,
+      date: new Date().toISOString().split('T')[0],
+    });
+    setIsTrxModalOpen(true);
+  };
+
+  const handleUpdateTenantPaymentStatus = (tenantId, newStatus, monthKey = null) => {
+    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const targetMonth = monthKey || currentMonthKey;
+    setTenants(prev => prev.map(t => {
+      if (t.id === tenantId) {
+        const monthlyStatus = { ...(t.monthlyStatus || {}), [targetMonth]: newStatus };
+        return {
+          ...t,
+          paymentStatus: newStatus,
+          lastPaidMonth: newStatus === 'paid' ? targetMonth : (t.lastPaidMonth === targetMonth ? null : t.lastPaidMonth),
+          monthlyStatus,
+        };
+      }
+      return t;
+    }));
+    showToast(`Status tagihan diperbarui menjadi ${newStatus === 'paid' ? 'Lunas' : newStatus === 'overdue' ? 'Telat' : 'Menunggu'}`);
   };
 
   // Transaction Actions
@@ -448,9 +505,22 @@ export default function App() {
       ...prev,
     ]);
     if (trxData.type === 'income' && trxData.tenantName) {
-      setTenants(tenants.map(t => t.name === trxData.tenantName ? { ...t, paymentStatus: 'paid' } : t));
+      const trxMonth = trxData.date ? trxData.date.slice(0, 7) : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      setTenants(tenants.map(t => {
+        if (t.name === trxData.tenantName || String(t.roomNumber) === String(trxData.roomNumber)) {
+          const monthlyStatus = { ...(t.monthlyStatus || {}), [trxMonth]: 'paid' };
+          return {
+            ...t,
+            paymentStatus: 'paid',
+            lastPaidMonth: trxMonth,
+            monthlyStatus,
+          };
+        }
+        return t;
+      }));
     }
     setIsTrxModalOpen(false);
+    setTrxInitialData(null);
     showToast('Transaksi berhasil dicatat!');
   };
 
@@ -599,7 +669,10 @@ export default function App() {
               setEditingTenant(null);
               setIsTenantModalOpen(true);
             }}
-            onOpenTrxModal={() => setIsTrxModalOpen(true)}
+            onOpenTrxModal={() => {
+              setTrxInitialData(null);
+              setIsTrxModalOpen(true);
+            }}
             onOpenComplaintModal={() => setIsComplaintModalOpen(true)}
             onSelectTab={setActiveTab}
             onSendWhatsAppReminder={handleSendWhatsAppReminder}
@@ -646,6 +719,22 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'bills' && (
+          <BillsView
+            tenants={tenants}
+            roomByNumber={roomByNumber}
+            transactions={transactions}
+            onSendWhatsAppReminder={handleSendWhatsAppReminder}
+            onPayBill={handlePayBill}
+            onUpdatePaymentStatus={handleUpdateTenantPaymentStatus}
+            onSelectReceipt={setReceiptTrx}
+            onAddTransaction={() => {
+              setTrxInitialData(null);
+              setIsTrxModalOpen(true);
+            }}
+          />
+        )}
+
         {isAdmin && activeTab === 'finance' && (
           <FinanceView
             transactions={transactions}
@@ -653,7 +742,10 @@ export default function App() {
             totalExpense={totalExpense}
             netProfit={netProfit}
             roomByNumber={roomByNumber}
-            onAddTransaction={() => setIsTrxModalOpen(true)}
+            onAddTransaction={() => {
+              setTrxInitialData(null);
+              setIsTrxModalOpen(true);
+            }}
             onSelectReceipt={setReceiptTrx}
             onDeleteTransaction={handleDeleteTransaction}
           />
@@ -704,10 +796,15 @@ export default function App() {
       />
 
       <TransactionModal
+        key={isTrxModalOpen ? (trxInitialData ? `${trxInitialData.tenantName}-${trxInitialData.roomNumber}` : 'empty-trx') : 'closed'}
         isOpen={isTrxModalOpen}
-        onClose={() => setIsTrxModalOpen(false)}
+        onClose={() => {
+          setIsTrxModalOpen(false);
+          setTrxInitialData(null);
+        }}
         rooms={rooms}
         roomByNumber={roomByNumber}
+        initialData={trxInitialData}
         onSave={handleSaveTransaction}
       />
 
