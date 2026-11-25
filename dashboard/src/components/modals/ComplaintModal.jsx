@@ -85,17 +85,17 @@ export default function ComplaintModal({
           </div>
         </div>
 
-        <div className="pt-3 flex justify-end gap-2">
+        <div className="pt-3 flex gap-2 justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 cursor-pointer"
           >
             Batal
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 shadow cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 shadow cursor-pointer"
           >
             Simpan Laporan
           </button>

@@ -12,12 +12,12 @@ export default function ReceiptModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-transparent print:static"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 print:p-0 print:bg-transparent print:static"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-6 border border-slate-200 print:border-none print:shadow-none print:p-0 print:max-w-none">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-4 sm:p-6 border border-slate-200 print:border-none print:shadow-none print:p-0 print:max-w-none max-h-[94vh] overflow-y-auto">
         <div id="receipt-area" className="border-2 border-dashed border-[#bca878] p-6 rounded-2xl bg-[#fffdf8]">
           <div className="text-center pb-4 border-b border-dashed border-slate-300">
             <div className="flex justify-center mb-2">
@@ -68,25 +68,25 @@ export default function ReceiptModal({
           </div>
         </div>
 
-        <div className="mt-5 flex gap-2 justify-end print:hidden">
+        <div className="mt-4 sm:mt-5 flex flex-wrap gap-2 justify-end print:hidden">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer text-center"
           >
             Tutup
           </button>
           <button
             type="button"
             onClick={() => window.print()}
-            className="px-4 py-2 bg-[#354c3f] hover:bg-[#1f3028] text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 bg-[#354c3f] hover:bg-[#1f3028] text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow cursor-pointer text-center"
           >
-            <Printer className="w-4 h-4" /> Cetak Kuitansi
+            <Printer className="w-4 h-4" /> Cetak
           </button>
           <button
             type="button"
             onClick={onDownloadPdf}
-            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow cursor-pointer text-center"
           >
             <Download className="w-4 h-4" /> Simpan PDF
           </button>

@@ -324,67 +324,67 @@ export default function BillsView({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Tagihan Aktif */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Tagihan Periode Ini</span>
-            <div className="p-2 bg-[#eeeadf] text-[#354c3f] rounded-lg border border-[#e8e1d1]">
-              <Receipt className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Total Tagihan</span>
+            <div className="p-1.5 sm:p-2 bg-[#eeeadf] text-[#354c3f] rounded-lg border border-[#e8e1d1]">
+              <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-slate-900">{formatRupiah(stats.totalNominal)}</div>
-            <p className="text-xs text-slate-500 mt-1">
-              Dari <span className="font-semibold text-slate-700">{stats.totalCount}</span> penyewa aktif
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-slate-900">{formatRupiah(stats.totalNominal)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">
+              Dari <span className="font-semibold text-slate-700">{stats.totalCount}</span> penyewa
             </p>
           </div>
         </div>
 
         {/* Belum Bayar / Menunggu */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">Menunggu Pembayaran</span>
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
-              <Clock className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-amber-600">Menunggu Bayar</span>
+            <div className="p-1.5 sm:p-2 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-amber-700">{formatRupiah(stats.pendingNominal)}</div>
-            <p className="text-xs text-slate-500 mt-1">
-              <span className="font-semibold text-amber-700">{stats.pendingCount}</span> kamar menunggu pembayaran
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-amber-700">{formatRupiah(stats.pendingNominal)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">
+              <span className="font-semibold text-amber-700">{stats.pendingCount}</span> kamar
             </p>
           </div>
         </div>
 
         {/* Lewat Jatuh Tempo / Telat */}
-        <div className="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-rose-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-600">Telat / Lewat Due Date</span>
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-lg border border-rose-100">
-              <AlertTriangle className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-600">Lewat Tempo</span>
+            <div className="p-1.5 sm:p-2 bg-rose-50 text-rose-600 rounded-lg border border-rose-100">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-rose-600">{formatRupiah(stats.overdueNominal)}</div>
-            <p className="text-xs text-slate-500 mt-1">
-              <span className="font-semibold text-rose-600">{stats.overdueCount}</span> tagihan lewat tempo
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-rose-600">{formatRupiah(stats.overdueNominal)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">
+              <span className="font-semibold text-rose-600">{stats.overdueCount}</span> tagihan telat
             </p>
           </div>
         </div>
 
         {/* Sudah Lunas */}
-        <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-emerald-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Sudah Lunas</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
-              <CheckCircle2 className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-600">Sudah Lunas</span>
+            <div className="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-emerald-600">{formatRupiah(stats.paidNominal)}</div>
-            <p className="text-xs text-slate-500 mt-1">
-              <span className="font-semibold text-emerald-600">{stats.paidCount}</span> kamar telah lunas
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-600">{formatRupiah(stats.paidNominal)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">
+              <span className="font-semibold text-emerald-600">{stats.paidCount}</span> kamar lunas
             </p>
           </div>
         </div>
@@ -393,7 +393,7 @@ export default function BillsView({
       {/* Filter & Search Bar */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         {/* Search */}
-        <div className="bg-white p-3.5 rounded-[12px] border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] flex items-center gap-3 flex-1">
+        <div className="bg-white p-3 sm:p-3.5 rounded-[12px] border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] flex items-center gap-3 flex-1">
           <Search className="w-5 h-5 text-[#6d716a] shrink-0" />
           <input
             type="text"
@@ -405,13 +405,13 @@ export default function BillsView({
         </div>
 
         {/* Filter Buttons & Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
           {/* Status Filter */}
-          <div className="flex items-center bg-white p-1 rounded-xl border border-[#e8e1d1] text-xs font-semibold text-slate-600">
+          <div className="flex items-center bg-white p-1 rounded-xl border border-[#e8e1d1] text-xs font-semibold text-slate-600 shrink-0">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                 statusFilter === 'all' ? 'bg-[#1f3028] text-white shadow-xs' : 'hover:bg-slate-100'
               }`}
             >
@@ -420,7 +420,7 @@ export default function BillsView({
             <button
               type="button"
               onClick={() => setStatusFilter('unpaid')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                 statusFilter === 'unpaid' ? 'bg-[#1f3028] text-white shadow-xs' : 'hover:bg-slate-100'
               }`}
             >
@@ -429,7 +429,7 @@ export default function BillsView({
             <button
               type="button"
               onClick={() => setStatusFilter('overdue')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                 statusFilter === 'overdue' ? 'bg-rose-600 text-white shadow-xs' : 'hover:bg-slate-100 text-rose-700'
               }`}
             >
@@ -438,7 +438,7 @@ export default function BillsView({
             <button
               type="button"
               onClick={() => setStatusFilter('paid')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                 statusFilter === 'paid' ? 'bg-emerald-700 text-white shadow-xs' : 'hover:bg-slate-100 text-emerald-700'
               }`}
             >
@@ -447,23 +447,173 @@ export default function BillsView({
           </div>
 
           {/* Location Filter */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={locationFilter}
               onChange={(e) => setLocationFilter(e.target.value)}
               className="text-xs font-semibold bg-white border border-[#e8e1d1] rounded-xl px-3 py-2 text-slate-700 focus:outline-none cursor-pointer"
             >
-              <option value="all">Semua Lokasi Kost</option>
-              <option value="athaya">Kost Athaya</option>
-              <option value="alya">Kost Alya</option>
-              <option value="andayani">Kost Andayani</option>
+              <option value="all">Semua Lokasi</option>
+              <option value="athaya">Athaya</option>
+              <option value="alya">Alya</option>
+              <option value="andayani">Andayani</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Bills Table - Ascending by Due Date */}
-      <div className="bg-white rounded-xl border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] overflow-hidden">
+      {/* Mobile Bills Card Feed (visible on < md screens) */}
+      <div className="block md:hidden space-y-3">
+        {filteredBills.length === 0 ? (
+          <div className="bg-white rounded-xl border border-[#e8e1d1] p-8 text-center text-slate-400 text-sm">
+            <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            {searchQuery || statusFilter !== 'all' || locationFilter !== 'all'
+              ? 'Tidak ada data tagihan yang sesuai dengan filter pencarian.'
+              : `Belum ada penghuni aktif untuk periode ${MONTH_NAMES[activeMonth]} ${activeYear}.`}
+          </div>
+        ) : (
+          filteredBills.map(({
+            tenant,
+            room,
+            monthlyPrice,
+            dueDateForMonth,
+            daysDiff,
+            isOverdueByDate,
+            isDueToday,
+            isDueSoon,
+            effectiveStatus,
+            latestReceipt,
+          }) => (
+            <div
+              key={tenant.id}
+              className="bg-white rounded-2xl border border-[#e8e1d1] p-4 shadow-xs space-y-3"
+            >
+              {/* Header: Room badge + Tenant name & Due Date Badge */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                    {getRoomDisplayNumber(tenant.roomNumber)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm leading-tight">{tenant.name}</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {getRoomLocation(tenant.roomNumber, roomByNumber)}
+                      {room?.type && ` • ${getRoomTypeLabel(room.type)}`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Due status pill */}
+                <div>
+                  {effectiveStatus === 'paid' ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Lunas
+                    </span>
+                  ) : isDueToday ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      Hari Ini
+                    </span>
+                  ) : isOverdueByDate ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                      Telat {Math.abs(daysDiff)}h
+                    </span>
+                  ) : isDueSoon ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                      Sisa {daysDiff}h
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600">
+                      {daysDiff !== null ? `Sisa ${daysDiff}h` : '-'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Info: Due Date + Nominal Tagihan */}
+              <div className="bg-[#faf8f5] rounded-xl p-2.5 border border-[#e8e1d1]/70 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Jatuh Tempo</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-800 mt-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#354c3f]" />
+                    <span>{formatDate(dueDateForMonth)}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Nominal Tagihan</span>
+                  <div className="text-sm font-extrabold text-slate-900 mt-0.5">
+                    {formatRupiah(monthlyPrice)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Select & Action Buttons */}
+              <div className="pt-1 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-slate-500">Status:</span>
+                  <select
+                    value={effectiveStatus}
+                    onChange={(e) => onUpdatePaymentStatus(tenant.id, e.target.value, activeMonthKey)}
+                    className={`px-2.5 py-1 text-xs rounded-lg font-bold border cursor-pointer focus:outline-none transition ${
+                      effectiveStatus === 'paid'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : effectiveStatus === 'overdue'
+                        ? 'bg-rose-50 text-rose-800 border-rose-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    <option value="pending">⏳ Menunggu (Belum Bayar)</option>
+                    <option value="overdue">⚠️ Telat / Lewat Tempo</option>
+                    <option value="paid">✓ Lunas</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => onSendWhatsAppReminder(tenant, dueDateForMonth)}
+                    className="w-full justify-center min-h-[36px] px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>WA Tagihan</span>
+                  </button>
+
+                  {effectiveStatus !== 'paid' ? (
+                    <button
+                      type="button"
+                      onClick={() => onPayBill(tenant, dueDateForMonth)}
+                      className="w-full justify-center min-h-[36px] px-2.5 py-1.5 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Catat Bayar</span>
+                    </button>
+                  ) : latestReceipt && onSelectReceipt ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectReceipt(latestReceipt)}
+                      className="w-full justify-center min-h-[36px] px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Kuitansi</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onPayBill(tenant, dueDateForMonth)}
+                      className="w-full justify-center min-h-[36px] px-2 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Bayar</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Bills Table - Ascending by Due Date */}
+      <div className="hidden md:block bg-white rounded-xl border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>

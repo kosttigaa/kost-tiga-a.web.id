@@ -184,11 +184,11 @@ export default function RegistrationsView({
       </div>
 
       {/* Quick Status Filter Pills */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full">
         <button
           type="button"
           onClick={() => setStatusFilter('pending')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
             statusFilter === 'pending'
               ? 'bg-amber-600 text-white shadow-sm'
               : 'bg-white border border-amber-200 text-amber-800 hover:bg-amber-50'
@@ -199,7 +199,7 @@ export default function RegistrationsView({
         <button
           type="button"
           onClick={() => setStatusFilter('approved')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
             statusFilter === 'approved'
               ? 'bg-emerald-700 text-white shadow-sm'
               : 'bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50'
@@ -210,7 +210,7 @@ export default function RegistrationsView({
         <button
           type="button"
           onClick={() => setStatusFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
             statusFilter === 'all'
               ? 'bg-[#1f3028] text-white shadow-sm'
               : 'bg-white border border-[#e8e1d1] text-[#3c4540] hover:bg-[#eeeadf]'
@@ -221,7 +221,7 @@ export default function RegistrationsView({
         <button
           type="button"
           onClick={() => setStatusFilter('rejected')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
             statusFilter === 'rejected'
               ? 'bg-rose-700 text-white shadow-sm'
               : 'bg-white border border-rose-200 text-rose-800 hover:bg-rose-50'
@@ -231,8 +231,160 @@ export default function RegistrationsView({
         </button>
       </div>
 
-      {/* List / Table */}
-      <div className="bg-white rounded-xl border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] overflow-hidden">
+      {/* Mobile Registrations Card Feed (visible on < md screens) */}
+      <div className="block md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-[#e8e1d1] p-8 text-center text-[#6d716a] text-sm">
+            {statusFilter === 'pending'
+              ? 'Tidak ada calon penghuni yang menunggu check-in. Semua pendaftar telah diproses.'
+              : 'Tidak ada data pendaftaran yang sesuai dengan pencarian atau filter.'}
+          </div>
+        ) : (
+          filtered.map((item) => {
+            const phoneDigits = cleanPhone(item.phone);
+            const isPending = !item.status || item.status === 'pending';
+            const isApproved = item.status === 'approved';
+            const isRejected = item.status === 'rejected';
+
+            return (
+              <div
+                key={item.id}
+                className="bg-white rounded-2xl border border-[#e8e1d1] p-4 shadow-xs space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#eeeadf] text-[#354c3f] border border-[#e8e1d1]">
+                        {item.kost || 'Kost Tiga A'}
+                      </span>
+                      <span className="text-[11px] text-[#6d716a]">{formatDate(item.date)}</span>
+                    </div>
+                    <h3 className="font-bold text-[#242d29] text-sm mt-1 leading-tight">{item.fullName}</h3>
+                    <p className="text-[11px] text-[#6d716a] font-mono mt-0.5">NIK: {item.nik || '-'}</p>
+                  </div>
+                  <div>
+                    {isApproved && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <Check className="w-3 h-3" /> Disetujui
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                        <X className="w-3 h-3" /> Ditolak
+                      </span>
+                    )}
+                    {isPending && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                        <Clock className="w-3 h-3" /> Perlu Proses
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-[#faf8f5] rounded-xl p-2.5 border border-[#e8e1d1]/70 text-xs text-slate-600 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400">Kontak WhatsApp:</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-[#242d29]">
+                      <span>{item.phone}</span>
+                      {phoneDigits && (
+                        <a
+                          href={`https://wa.me/${phoneDigits}?text=Halo%20kak%20${encodeURIComponent(item.fullName)}%2C%20terkait%20pendaftaran%20di%20${encodeURIComponent(item.kost || 'Kost Tiga A')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 hover:text-emerald-800 p-0.5"
+                          title="Chat WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  {(item.guardianName || item.guardianPhone) && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-400">Wali:</span>
+                      <span className="text-slate-700">{item.guardianName || '-'} ({item.guardianPhone || '-'})</span>
+                    </div>
+                  )}
+                  {item.vehicle && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-400">Kendaraan:</span>
+                      <span className="text-slate-700">{item.vehicle}</span>
+                    </div>
+                  )}
+                  {item.address && (
+                    <div className="text-[11px] text-slate-500 pt-0.5 border-t border-slate-200/60">
+                      Alamat: {item.address}
+                    </div>
+                  )}
+                </div>
+
+                {/* Documents / Files */}
+                <div className="flex items-center gap-2">
+                  {item.ktpImage ? (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage(getUploadUrl(item.ktpImage))}
+                      className="flex-1 justify-center min-h-[32px] px-2.5 py-1 bg-white border border-[#e8e1d1] rounded-lg text-xs font-semibold text-[#354c3f] hover:bg-[#eeeadf] inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" /> Lihat KTP
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 flex-1 text-center">Tanpa KTP</span>
+                  )}
+
+                  {item.pdfFile && (
+                    <a
+                      href={getUploadUrl(item.pdfFile)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 justify-center min-h-[32px] px-2.5 py-1 bg-white border border-sky-200 rounded-lg text-xs font-semibold text-sky-700 hover:bg-sky-50 inline-flex items-center gap-1"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Bukti PDF
+                    </a>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                  {isPending && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onCheckInFromRegistration(item)}
+                        className="flex-1 justify-center min-h-[36px] px-3 py-1.5 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" /> Check-In Kamar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateStatus(item.id, 'rejected')}
+                        className="min-h-[36px] px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" /> Tolak
+                      </button>
+                    </>
+                  )}
+                  {!isPending && (
+                    <>
+                      <span className="flex-1 text-[11px] text-slate-400">Pendaftaran telah diproses</span>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRegistration(item)}
+                        className="min-h-[34px] px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop List / Table (visible on >= md screens) */}
+      <div className="hidden md:block bg-white rounded-xl border border-[#e8e1d1] shadow-[0_1px_3px_rgba(36,45,41,0.04)] overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-12 text-center text-[#6d716a] text-sm">
             {statusFilter === 'pending'

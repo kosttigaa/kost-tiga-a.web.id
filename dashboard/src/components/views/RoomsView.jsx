@@ -41,41 +41,43 @@ export default function RoomsView({
         <button
           type="button"
           onClick={onAddRoom}
-          className="min-h-[42px] px-4 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
+          className="w-full sm:w-auto justify-center min-h-[42px] px-4 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Tambah Kamar Baru
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
             <Filter className="w-4 h-4" /> Filter:
           </div>
-          <select
-            value={roomFilterStatus}
-            onChange={(e) => setRoomFilterStatus(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 outline-none"
-          >
-            <option value="all">Semua Status</option>
-            <option value="available">Tersedia / Kosong</option>
-            <option value="occupied">Terisi</option>
-            <option value="maintenance">Dalam Perbaikan</option>
-          </select>
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            <select
+              value={roomFilterStatus}
+              onChange={(e) => setRoomFilterStatus(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 outline-none"
+            >
+              <option value="all">Semua Status</option>
+              <option value="available">Kosong</option>
+              <option value="occupied">Terisi</option>
+              <option value="maintenance">Perbaikan</option>
+            </select>
 
-          <select
-            value={roomFilterLocation}
-            onChange={(e) => setRoomFilterLocation(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 outline-none"
-          >
-            <option value="all">Semua Lokasi</option>
-            <option value="athaya">{LOCATION_NAMES.athaya} ({roomsPerLocation.athaya || 0} kamar)</option>
-            <option value="alya">{LOCATION_NAMES.alya} ({roomsPerLocation.alya || 0} kamar)</option>
-            <option value="andayani">{LOCATION_NAMES.andayani} ({roomsPerLocation.andayani || 0} kamar)</option>
-          </select>
+            <select
+              value={roomFilterLocation}
+              onChange={(e) => setRoomFilterLocation(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 outline-none"
+            >
+              <option value="all">Semua Lokasi</option>
+              <option value="athaya">{LOCATION_NAMES.athaya} ({roomsPerLocation.athaya || 0})</option>
+              <option value="alya">{LOCATION_NAMES.alya} ({roomsPerLocation.alya || 0})</option>
+              <option value="andayani">{LOCATION_NAMES.andayani} ({roomsPerLocation.andayani || 0})</option>
+            </select>
+          </div>
         </div>
 
-        <div className="text-xs text-slate-500 font-medium">
+        <div className="text-xs text-slate-500 font-medium text-right sm:text-left">
           Menampilkan <strong className="text-slate-800">{filteredRooms.length}</strong> dari {rooms.length} kamar
         </div>
       </div>

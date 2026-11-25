@@ -45,33 +45,33 @@ export default function DashboardView({
             Ringkasan operasional, ketersediaan kamar, dan keuangan kost dalam satu halaman.
           </p>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           <button
             type="button"
             onClick={onOpenCheckIn}
-            className="min-h-[42px] px-4 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center min-h-[42px] px-4 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Check-in Baru
           </button>
           <button
             type="button"
             onClick={onOpenTrxModal}
-            className="min-h-[42px] px-4 bg-[#1f3028] hover:bg-[#17251e] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center min-h-[42px] px-4 bg-[#1f3028] hover:bg-[#17251e] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
           >
             <DollarSign className="w-4 h-4" /> Catat Kas
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tingkat Hunian</span>
-            <div className="p-2 bg-[#eeeadf] text-[#354c3f] rounded-lg border border-[#e8e1d1]"><BedDouble className="w-5 h-5" /></div>
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Tingkat Hunian</span>
+            <div className="p-1.5 sm:p-2 bg-[#eeeadf] text-[#354c3f] rounded-lg border border-[#e8e1d1]"><BedDouble className="w-4 h-4 sm:w-5 sm:h-5" /></div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-slate-900">{occupancyRate}%</div>
-            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-xl sm:text-2xl font-bold text-slate-900">{occupancyRate}%</div>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-[11px] sm:text-xs text-slate-500">
               <span className="font-medium text-emerald-600">{occupiedRooms} Terisi</span>
               <span>•</span>
               <span className="text-slate-500">{availableRooms} Kosong</span>
@@ -79,47 +79,47 @@ export default function DashboardView({
               <span className="text-amber-600">{maintenanceRooms} Servis</span>
             </div>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 sm:mt-3 overflow-hidden">
             <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${occupancyRate}%` }} />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Pemasukan</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><TrendingUp className="w-5 h-5" /></div>
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Pemasukan</span>
+            <div className="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 rounded-lg"><TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" /></div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-emerald-600">{formatRupiah(totalIncome)}</div>
-            <p className="text-xs text-slate-500 mt-1">Akumulasi sewa & denda</p>
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-600">{formatRupiah(totalIncome)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1">Akumulasi sewa & denda</p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pengeluaran Kost</span>
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-lg"><TrendingDown className="w-5 h-5" /></div>
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Pengeluaran</span>
+            <div className="p-1.5 sm:p-2 bg-rose-50 text-rose-600 rounded-lg"><TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" /></div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-rose-600">{formatRupiah(totalExpense)}</div>
-            <p className="text-xs text-slate-500 mt-1">Listrik, air, wifi & servis</p>
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-rose-600">{formatRupiah(totalExpense)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1">Listrik, air, wifi & servis</p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Laba Bersih</span>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><DollarSign className="w-5 h-5" /></div>
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Laba Bersih</span>
+            <div className="p-1.5 sm:p-2 bg-indigo-50 text-indigo-600 rounded-lg"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5" /></div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-indigo-700">{formatRupiah(netProfit)}</div>
-            <p className="text-xs text-emerald-600 font-medium mt-1">Kas operasional aktif</p>
+          <div className="mt-2 sm:mt-3">
+            <div className="text-lg sm:text-2xl font-bold text-indigo-700">{formatRupiah(netProfit)}</div>
+            <p className="text-[11px] sm:text-xs text-emerald-600 font-medium mt-1">Kas operasional aktif</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+        <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="p-2 bg-rose-100 text-rose-600 rounded-lg"><Clock className="w-4 h-4" /></div>
@@ -144,9 +144,9 @@ export default function DashboardView({
               overdueTenants.map((t) => {
                 const isOverdue = (t.effectivePaymentStatus || t.paymentStatus) === 'overdue';
                 return (
-                  <div key={t.id} className="py-3 flex items-center justify-between flex-wrap gap-2">
+                  <div key={t.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-xs">
+                      <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-xs shrink-0">
                         {getRoomDisplayNumber(t.roomNumber)}
                       </div>
                       <div>
@@ -155,7 +155,7 @@ export default function DashboardView({
                         <p className="text-xs text-slate-500">Jatuh Tempo: {formatDate(t.dueDate)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
                       <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${
                         isOverdue ? 'bg-rose-100 text-rose-700 font-semibold' : 'bg-amber-100 text-amber-700'
                       }`}>
@@ -176,7 +176,7 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900 text-base">Keluhan Terkini</h3>

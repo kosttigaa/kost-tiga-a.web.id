@@ -251,17 +251,17 @@ export default function TenantModal({
           </div>
         )}
 
-        <div className="pt-3 flex justify-end gap-2">
+        <div className="pt-3 flex gap-2 justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 cursor-pointer"
           >
             Batal
           </button>
           <button
             type="submit"
-            className="px-5 py-2 bg-[#1f3028] text-white text-sm font-bold rounded-xl hover:bg-[#354c3f] shadow cursor-pointer transition-colors"
+            className="flex-1 sm:flex-initial justify-center px-5 py-2 bg-[#1f3028] text-white text-sm font-bold rounded-xl hover:bg-[#354c3f] shadow cursor-pointer transition-colors"
           >
             Simpan & Check-In
           </button>

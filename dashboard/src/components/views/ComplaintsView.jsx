@@ -28,20 +28,20 @@ export default function ComplaintsView({
         <button
           type="button"
           onClick={onOpenComplaintModal}
-          className="min-h-[42px] px-4 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
+          className="w-full sm:w-auto justify-center min-h-[42px] px-4 bg-[#354c3f] hover:bg-[#1f3028] text-white rounded-[10px] text-[13px] font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Buat Tiket Keluhan
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {complaints.length === 0 ? (
           <div className="col-span-full bg-white rounded-2xl border border-slate-200/80 p-8 text-center text-slate-400 text-sm">
             Tidak ada laporan keluhan aktif saat ini. ✨
           </div>
         ) : (
           complaints.map((item) => (
-            <div key={item.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+            <div key={item.id} className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-mono font-bold text-slate-400">{item.id}</span>
