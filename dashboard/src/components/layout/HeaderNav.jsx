@@ -70,7 +70,7 @@ export default function HeaderNav({
           {/* Segmented Pill Navigation Bar */}
           <nav
             aria-label="Navigasi admin"
-            className="flex w-full min-w-0 max-w-full items-center gap-1 overflow-x-auto no-scrollbar rounded-2xl border border-[#e8e1d1] bg-[#eeeadf]/80 p-1.5 shadow-[0_1px_3px_rgba(36,45,41,0.03)]"
+            className="flex w-full min-w-0 items-center gap-1 overflow-x-auto no-scrollbar rounded-2xl border border-[#e8e1d1] bg-[#eeeadf]/80 p-1.5 shadow-[0_1px_3px_rgba(36,45,41,0.03)] lg:w-auto"
           >
             {TAB_CONFIG.filter(({ id }) => allowedTabs.includes(id)).map(({ id, label, icon: Icon }) => {
               const isActive = activeTab === id;
@@ -116,7 +116,7 @@ export default function HeaderNav({
           </nav>
 
           {/* Action Buttons: Ekspor & Keluar */}
-          <div className="flex items-center justify-end gap-2 self-end lg:self-auto shrink-0 w-full lg:w-auto">
+          <div className="flex items-center justify-end gap-2 self-end lg:self-auto shrink-0">
             {isAdmin && (
               <div className="relative">
                 <button
