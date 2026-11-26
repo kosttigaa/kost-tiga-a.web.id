@@ -74,6 +74,7 @@ html {
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background: radial-gradient(ellipse at 14% 8%, rgb(82 107 91 / 7%), transparent 30rem),
               radial-gradient(ellipse at 88% 42%, rgb(216 195 145 / 10%), transparent 32rem),
@@ -94,6 +95,15 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+/* Cegah auto-zoom pada input/select/textarea di iOS Safari */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Sembunyikan scrollbar untuk navigasi tab horizontal */

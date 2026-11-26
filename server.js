@@ -866,8 +866,8 @@ async function saveKtpImage(dataDir, id, base64Data) {
 const adminStyles = `
 :root{color-scheme:light;--paper:#f6f3eb;--ink:#242d29;--muted:#6d716a;--line:#e8e1d1;--blue:#526b5b;--blue-dark:#354c3f;--night:#1f3028;--acid:#d7d6a1;--border-acid:#bca878;--cream:#eeeadf;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100vh;overflow-x:hidden;color:var(--ink);background:radial-gradient(ellipse at 14% 8%,rgb(82 107 91 / 7%),transparent 30rem),radial-gradient(ellipse at 88% 42%,rgb(216 195 145 / 10%),transparent 32rem),var(--paper)}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:0 max(24px,calc((100% - 1120px)/2));border-bottom:1px solid var(--line);background:rgba(255,253,248,0.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10}
+html,body{margin:0;min-height:100vh;min-height:100dvh;overflow-x:hidden;color:var(--ink);background:radial-gradient(ellipse at 14% 8%,rgb(82 107 91 / 7%),transparent 30rem),radial-gradient(ellipse at 88% 42%,rgb(216 195 145 / 10%),transparent 32rem),var(--paper)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:0 max(24px,calc((100% - 1120px)/2));border-bottom:1px solid var(--line);background:rgba(255,253,248,0.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10}
 .brand{display:inline-flex;align-items:center;gap:12px;color:var(--ink);text-decoration:none;font-family:Manrope,sans-serif;font-weight:800;font-size:16px;letter-spacing:-.01em}
 .mark{display:grid;width:36px;aspect-ratio:1;place-items:center;border:1px solid var(--border-acid);border-radius:10px;background:var(--acid);color:var(--night);font-family:Manrope,sans-serif;font-size:13px;font-weight:800;transform:rotate(-3deg);box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:transform .2s ease}
 .mark:hover{transform:rotate(0)}
@@ -1074,6 +1074,49 @@ function matchesSecret(suppliedValue, expectedValue) {
 
 const adminSessionCookie = "kost-admin-session";
 const adminSessionMaxAge = 8 * 60 * 60;
+
+function getClientIp(request) {
+  let clientIp = request.socket.remoteAddress ?? "unknown";
+  if (clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::ffff:127.0.0.1") {
+    clientIp = request.headers["x-real-ip"] || request.headers["x-forwarded-for"]?.split(",")[0].trim() || clientIp;
+  }
+  return clientIp;
+}
+
+function createRateLimiter(maxHits, windowMs) {
+  const buckets = new Map();
+  return {
+    isBlocked(key) {
+      const entry = buckets.get(key);
+      if (!entry) return false;
+      if (entry.resetAt <= Date.now()) {
+        buckets.delete(key);
+        return false;
+      }
+      return entry.count >= maxHits;
+    },
+    record(key) {
+      const now = Date.now();
+      if (buckets.size > 5000) {
+        for (const [k, v] of buckets) {
+          if (v.resetAt <= now) buckets.delete(k);
+        }
+      }
+      const entry = buckets.get(key);
+      if (entry && entry.resetAt > now) {
+        entry.count += 1;
+      } else {
+        buckets.set(key, { count: 1, resetAt: now + windowMs });
+      }
+    },
+    clear(key) {
+      buckets.delete(key);
+    },
+  };
+}
+
+const adminLoginLimiter = createRateLimiter(10, 15 * 60 * 1000);
+const daftarLimiter = createRateLimiter(10, 15 * 60 * 1000);
 
 function getAdminSession(request, sessions) {
   const cookie = new RegExp(`(?:^|;\\s*)${adminSessionCookie}=([a-f0-9]{64})(?:;|$)`).exec(request.headers.cookie ?? "");
@@ -1287,12 +1330,21 @@ async function handleAdminDashboard(request, response, dataDir, accessLogs, auth
       return;
     }
     if (form.has("username") || form.has("password")) {
+      const clientIp = getClientIp(request);
+      if (adminLoginLimiter.isBlocked(clientIp)) {
+        const body = renderAdminLoginPage("Terlalu banyak percobaan login gagal. Silakan tunggu 15 menit.", basePath);
+        response.writeHead(429, { ...adminPageHeaders(body), "Retry-After": "900" });
+        response.end(body);
+        return;
+      }
       if (!matchesSecret(form.get("username"), auth.adminUser) || !matchesSecret(form.get("password"), auth.adminPassword)) {
+        adminLoginLimiter.record(clientIp);
         const body = renderAdminLoginPage("Username atau password salah.", basePath);
         response.writeHead(401, adminPageHeaders(body));
         response.end(body);
         return;
       }
+      adminLoginLimiter.clear(clientIp);
       const token = randomBytes(32).toString("hex");
       sessions.set(token, Date.now() + adminSessionMaxAge * 1000);
       const secure = request.headers["x-forwarded-proto"]?.split(",")[0].trim() === "https" ? "; Secure" : "";
@@ -1570,6 +1622,9 @@ function handleFile(file) {
       uploadPreview.style.display = "flex";
       hideError();
     };
+    img.onerror = function() {
+      showError("Gambar tidak dapat diproses. Jika memakai iPhone (HEIC), ubah format ke JPG/PNG atau pilih ulang foto.");
+    };
     img.src = evt.target.result;
   };
   reader.readAsDataURL(file);
@@ -1701,8 +1756,8 @@ function renderDaftarPage() {
 <style>
 :root{--paper:#f6f3eb;--white:#fffdf8;--ink:#242d29;--muted:#6d716a;--line:#e8e1d1;--blue:#526b5b;--blue-dark:#354c3f;--night:#1f3028;--acid:#d7d6a1;--border-acid:#bca878;--cream:#eeeadf;--green:#15803d;--green-dark:#166534}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;overflow-x:hidden;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:radial-gradient(ellipse at 14% 8%,rgb(82 107 91 / 7%),transparent 30rem),radial-gradient(ellipse at 88% 42%,rgb(216 195 145 / 10%),transparent 32rem),var(--paper);-webkit-font-smoothing:antialiased}
-header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:0 max(20px,calc((100% - 900px)/2));background:rgba(255,253,248,0.92);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+body{margin:0;min-height:100vh;min-height:100dvh;overflow-x:hidden;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:radial-gradient(ellipse at 14% 8%,rgb(82 107 91 / 7%),transparent 30rem),radial-gradient(ellipse at 88% 42%,rgb(216 195 145 / 10%),transparent 32rem),var(--paper);-webkit-font-smoothing:antialiased}
+header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:0 max(20px,calc((100% - 900px)/2));background:rgba(255,253,248,0.92);border-bottom:1px solid var(--line);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-family:Manrope,sans-serif;font-weight:800;font-size:16px}
 .mark{display:grid;width:36px;aspect-ratio:1;place-items:center;border:1px solid var(--border-acid);border-radius:10px;background:var(--acid);color:var(--night);font-family:Manrope,sans-serif;font-size:13px;font-weight:800;transform:rotate(-3deg)}
 .nav-back{font-size:13px;font-weight:700;color:var(--blue-dark);text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;transition:all .15s ease}
@@ -2077,6 +2132,14 @@ async function handleDaftar(request, response, dataDir) {
     sendError(response, 405, "Method Not Allowed", { Allow: "GET, HEAD, POST" });
     return;
   }
+
+  const clientIp = getClientIp(request);
+  if (daftarLimiter.isBlocked(clientIp)) {
+    response.writeHead(429, { "Content-Type": "application/json; charset=utf-8", "Retry-After": "900" });
+    response.end(JSON.stringify({ ok: false, error: "Terlalu banyak percobaan pendaftaran. Silakan tunggu beberapa menit." }));
+    return;
+  }
+  daftarLimiter.record(clientIp);
 
   let payload;
   try {
@@ -2822,6 +2885,17 @@ async function serveDashboardSpaFile(request, response, filePath, isHtml = false
     };
     if (isHtml) {
       headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+      headers["Content-Security-Policy"] = [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: blob:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "frame-ancestors 'self'",
+      ].join("; ");
     } else {
       headers["Cache-Control"] = "public, max-age=31536000, immutable";
     }

@@ -11,7 +11,7 @@ export default function LoginView({
   onSubmit,
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen min-h-dvh flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-[0_16px_40px_rgba(36,45,41,0.08)] border border-slate-200 p-8">
         <div className="text-center mb-6">
           <Logo3A size="xl" className="mb-3" />
